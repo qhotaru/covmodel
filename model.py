@@ -6,6 +6,68 @@ import matplotlib.pyplot as plt
 import argparse
 import pandas as pd
 
+class realdata:
+    def __init__(self):
+        self.tp = None
+        pass
+    def readit(self, filename):
+        with open(filename, encoding='utf-8') as f:
+            line = f.readline()
+            print(line)
+        pass
+
+    def load_korea(self):
+        # filename = "..\..\COVID-19\csse_covid_19_data\csse_covid_19_time_series\time_series_covid19_confirmed_global.csv"
+        filename = "../../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
+        # self.readit(filename)
+        # return
+        df = pd.read_csv(filename)
+        tp = df.transpose()
+        indexname = 'Country/Region'
+        cols = tp.loc[indexname,]
+        tp.columns = cols
+        # print(cols)
+        name = "Korea, South"
+        korea = tp[name]
+        # print(korea)
+        kdata = korea[4:]
+        print(kdata)
+        # print(tp)
+        return
+    
+        tp.set_index(indexname)
+        korea = tp[name]
+        print(korea)
+
+    def nation_data(self,nationname):
+        filename = "../../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
+        if self.tp == None:
+            df = pd.read_csv(filename)
+            self.tp = df.transpose()
+        
+            indexname = 'Country/Region'
+            cols = self.tp.loc[indexname,]
+            self.tp.columns = cols
+
+        name = nationname
+        nationcol = self.tp[name]
+        # print(nationcol)
+        nation = nationcol[4:]
+        # print(tp)
+        return nation
+
+    def view_nation(self,nationname):
+        nationdata = self.nation_data(nationname)
+        ll = len(nationdata)
+        xx = np.linspace(0,ll-1,ll)
+        plt.plot(xx,nationdata,label=nationname)
+        plt.yscale('log')
+        plt.grid('both')
+        plt.title(f"{nationname}")
+        plt.show()
+    pass
+
+
 class model:
     de =  5.0  # exposure to infection
     dq =  5.0  # duration of infectious until quarantine
@@ -81,6 +143,7 @@ def doparse():
     parser.add_argument("-v", "--valiation1", action='store_true', help="variation")
     parser.add_argument("-d", "--dq", action='store_true', help="variation")
     parser.add_argument("--pq", action='store_true', help="show pq graph")
+    parser.add_argument("-j", "--jhu", action='store_true', help="show jhu")
     
     args = parser.parse_args()
     return args
@@ -291,6 +354,13 @@ def dopq():
     plt.show()
 
 
+def dojhu(args):
+    jhu = realdata()
+    # jhu.load_korea()
+    name = 'Korea, South'
+    jhu.view_nation(name)
+    
+    pass
 
 if __name__ == '__main__':
     args = doparse()
@@ -301,6 +371,7 @@ if __name__ == '__main__':
         dodq(args)
     elif args.pq:
         dopq(args)
+    elif args.jhu:
+        dojhu(args)
     else:
         main(args)
-    
