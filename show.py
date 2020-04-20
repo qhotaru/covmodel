@@ -76,7 +76,19 @@ class realdata:
                 break
             ix+=1
         return ix
-        
+
+    def showplot(self, name):
+        nation = self.nation_data(name)
+        ll = len(nation)
+        dd = np.linspace( 0.0, ll-1, ll)
+        plt.plot(dd,nation.diff(), label=nation)
+        title = name
+        # plt.yscale('log')
+        plt.grid('both')
+        self.show_graph(title)
+        pass
+
+    
     def view_nation(self,nationname):
         nationdata = self.nation_data(nationname)
 
@@ -447,6 +459,19 @@ def dojhu(args):
     
     pass
 
+def doshow(args):
+    jhu = realdata(args)
+    name = 'Iran'
+    jhu.showplot( name )
+
+if __name__ == '__main__':
+    args = doparse()
+    doshow( args )
+
+exit( 0 )
+#
+#
+#
 if __name__ == '__main__':
     args = doparse()
     if args.valiation1:
