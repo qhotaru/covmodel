@@ -158,6 +158,8 @@ class realdata:
 def doparse():
     parser = argparse.ArgumentParser()
 
+    parser.add_argument("-n", "--nation", nargs='+', type=str, help="nation list")
+
     parser.add_argument("-a", action='store_true', help="option")
     parser.add_argument("-p", "--p", nargs='+', type=float, help="p list")
     parser.add_argument("-v", "--valiation1", action='store_true', help="variation")
@@ -461,7 +463,7 @@ def dojhu(args):
 
 def doshow(args):
     jhu = realdata(args)
-    name = 'Iran'
+    name = args.nation
     jhu.showplot( name )
 
 if __name__ == '__main__':
