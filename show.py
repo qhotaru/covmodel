@@ -81,13 +81,37 @@ class realdata:
         nation = self.nation_data(name)
         ll = len(nation)
         dd = np.linspace( 0.0, ll-1, ll)
+        print(f"len={ll}")
+
+        fig, ax = plt.subplots(figsize=(8, 4))
+        xlabel = pd.to_datetime(nation.index)
+        delta = datetime.timedelta(days=1)
+        dx = drange(xlabel[0], xlabel[-1], delta)
+
+        # xticks = xlabel[::7]
+        ax.set_xticks(dx)
+
+        ax.xaxis.set_major_locator(DayLocator(bymonthday=None, interval=7, tz=None))
+        ax.xaxis.set_major_formatter(DateFormatter("%m/%d"))
+
+        ax.plot(xlabel, nation.diff(), label=nation)
+        
+        title = name
+        # plt.yscale('log')
+        plt.grid('both')
+        self.show_graph(title)
+
+
+    def showplot1(self, name):
+        nation = self.nation_data(name)
+        ll = len(nation)
+        dd = np.linspace( 0.0, ll-1, ll)
         plt.plot(dd,nation.diff(), label=nation)
         title = name
         # plt.yscale('log')
         plt.grid('both')
         self.show_graph(title)
         pass
-
     
     def view_nation(self,nationname):
         nationdata = self.nation_data(nationname)
