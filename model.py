@@ -11,6 +11,28 @@ from matplotlib.dates import drange
 from matplotlib.dates import DateFormatter
 from matplotlib.dates import DayLocator
 
+def doparse():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("-a", action='store_true', help="option")
+    parser.add_argument("-p", "--p", nargs='+', type=float, help="p list")
+    parser.add_argument("-v", "--valiation1", action='store_true', help="variation")
+    parser.add_argument("-d", "--dq", action='store_true', help="variation")
+    parser.add_argument("--pq", action='store_true', help="show pq graph")
+    parser.add_argument("-j", "--jhu", action='store_true', help="show jhu")
+    parser.add_argument("-l", "--linear", action='store_true', help="show with linear")
+    parser.add_argument("--korea", action='store_true', help="show korea")
+    parser.add_argument("-x", "--xrange", type=int, help="x axis range")
+
+    parser.add_argument("--i", action='store_true', help="show I")
+    parser.add_argument("--q", action='store_true', help="show Q")
+    parser.add_argument("--n", action='store_true', help="show N")
+
+    
+    args = parser.parse_args()
+    return args
+
+
 class realdata:
     def __init__(self, args):
         self.tp = None
@@ -143,25 +165,11 @@ class realdata:
 
 
 
-def doparse():
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("-a", action='store_true', help="option")
-    parser.add_argument("-p", "--p", nargs='+', type=float, help="p list")
-    parser.add_argument("-v", "--valiation1", action='store_true', help="variation")
-    parser.add_argument("-d", "--dq", action='store_true', help="variation")
-    parser.add_argument("--pq", action='store_true', help="show pq graph")
-    parser.add_argument("-j", "--jhu", action='store_true', help="show jhu")
-    parser.add_argument("-l", "--linear", action='store_true', help="show with linear")
-    parser.add_argument("--korea", action='store_true', help="show korea")
-    
-    args = parser.parse_args()
-    return args
-
-def showpic(title):
+def showpic(title, args):
     
     plt.grid('both')
-    plt.yscale('log')
+    if not args.linear:
+        plt.yscale('log')
     plt.legend()
     plt.title(title)
     plt.show()
@@ -213,15 +221,17 @@ class model:
         q = v[3]
         r = v[4]
 
-        if dch > 0 and t > dch:
-            p = 0.4
+        if False:
+            if dch > 0 and t > dch:
+                p = 0.4
+            if curelimit > 0 and q * 0.2 >= curelimit * 0.8:
+                beta = beta / 5
 
-        if curelimit > 0 and q * 0.2 >= curelimit * 0.8:
-            beta = beta / 5
-
-        p += int( t / 7 ) * 0.1
-        if p > 0.9:
-            p = 0.9
+        if False:
+            pass
+            #  p += int( t / 7 ) * 0.1
+            #  if p > 0.9:
+            #      p = 0.9
 
         dsdt = - beta * i * s
         dedt = beta * i * s - f * e
@@ -258,12 +268,15 @@ def main(args):
     beta = r0 * yr
     p = 0.5
 
+    initi = 10.0 ** -7
+    inite = 10.0 ** -7
+    
     x0 = [
-        0.999999, # s
-        0.0,   # e
-        0.000001,  # i
-        0.0,    # q
-        0.0     # r
+        1 - inite,  # s
+        inite,        # e
+        0.0,      # i
+        0.0,        # q
+        0.0         # r
     ]
     plist = (0.0, 0.2, 0.4)
     curelimit = 1.0/6.0 * np.power(10.0,-4.0)
@@ -283,6 +296,12 @@ def main(args):
     # t = np.arange(0, 10, 0.1)
     
     xmax = yday * 10
+    if type(args.xrange ) == int:
+        xmax = args.xrange
+
+    print("xrange = {}".format(args.xrange))
+    print(f"xmax={xmax} - {args.xrange}")
+
     t = np.linspace(0.0, xmax, 1000)
     t2 = t
     pop = 1.2 * np.power(10.0,8)
@@ -293,7 +312,7 @@ def main(args):
     plt.xticks(xticks)
     # plt.ylim(ymin=np.power(10.0,-6) * pop, ymax=np.power(10.0, -3) * pop)
     # plt.ylim(ymin=1, ymax=np.power(10.0, -3) * pop)
-    plt.ylim(ymin=10.0, ymax=10**8)
+    # plt.ylim(ymin=10.0, ymax=10**8)
 
     vl = []
     for ppx in params:
@@ -307,15 +326,27 @@ def main(args):
         q = v[:,3]
         r = v[:,4]
         
-        plt.plot(t2, pop * i, label='I p={} Dq={} t={}'.format( ppx[1], 1/ppx[3], ppx[6] ))
-        # plt.plot(t2, pop * q, label='Q p={} Dq={} t={}'.format( ppx[1], 1/ppx[3], ppx[6] ))
+        # plt.plot(t2, pop * i, label='I p={} Dq={} t={}'.format( ppx[1], 1/ppx[3], ppx[6] ))
+        p = ppx[1]
+        yq = ppx[3]
+        yqr = ppx[5]
+        dch = ppx[6]
+        n = p * yq * i
+
+        if args.q:
+            plt.plot(t2, pop * q, label='Q p={} Dq={} t={}'.format( ppx[1], 1/ppx[3], ppx[6] ))
+        if args.n:
+            plt.plot(t2, pop * n, label='N p={} Dq={} t={}'.format( p, 1/yq, dch ))
+        if args.i:
+            plt.plot(t2, pop * i, label='I p={} Dq={} t={}'.format( p, 1/yq, dch ))
+            
 
     cure = np.full(len(t), curelimit )
     hotel = np.full(len(t), curelimit /0.2 )
     plt.plot(t2,pop*cure, label='current')
     plt.plot(t2,pop*hotel, label='extended')
 
-    showpic('SEIQR')
+    showpic('SEIQR', args)
     
 def dodq(args):
     # 初期状態
@@ -397,7 +428,7 @@ def dodq(args):
     plt.plot(t2,pop*hotel, label='extended')
 
     title = "SEIRQ DQ={}".format(dqlist)
-    showpic(title)
+    showpic(title, args)
 
 def dopq():
     # 初期状態
@@ -449,6 +480,7 @@ def dojhu(args):
 
 if __name__ == '__main__':
     args = doparse()
+
     if args.valiation1:
         dovali1(args)
         pass
@@ -463,3 +495,7 @@ if __name__ == '__main__':
         poi.load_korea()
     else:
         main(args)
+
+#
+# EOF
+#
