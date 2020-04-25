@@ -474,7 +474,7 @@ def doqp(args):
     r0              = beta / yr
     pop = 1.2 * 10 ** 8
 
-    xxx = np.linspace(0.0,0.8,10)
+    xxx = np.linspace(0.0,0.8,9)
     t = np.linspace(0.0, 10000.0, 10000)
 
     dql = (3, 5,7,9, 11)
