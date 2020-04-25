@@ -19,6 +19,8 @@ def doparse():
     parser.add_argument("-v", "--valiation1", action='store_true', help="variation")
     parser.add_argument("-d", "--dq", action='store_true', help="variation")
     parser.add_argument("--pq", action='store_true', help="show pq graph")
+    parser.add_argument("--qp", action='store_true', help="show Dq graph")
+
     parser.add_argument("-j", "--jhu", action='store_true', help="show jhu")
     parser.add_argument("-l", "--linear", action='store_true', help="show with linear")
     parser.add_argument("--korea", action='store_true', help="show korea")
@@ -180,6 +182,8 @@ class model:
     dr =  14.0 # duration of infectiousness until recovery
     dqr = 10.0 # time-lag between diagnosis to recovery
 
+    dparam = (de, dq, dr, dqr)
+
     f   = 1 / de
     yq  = 1 / dq
     yr  = 1 / dr
@@ -190,13 +194,14 @@ class model:
     beta = r0 * yr
     p = 0.3
 
-    kpop = 5 * 10 ** 7
+    kpop = 1.2 * 10 ** 8
     initq = 100 / kpop
-    initi = 7000 / kpop
+    initi = 100 / kpop
+    inite = 100 / kpop
 
     x0 = [
-        1 - initi - initq,  # s
-        0.0,                # e
+        1 - initi - initq - inite,  # s
+        inite,                      # e
         initi,              # i
         initq,              # q
         0.0                 # r
@@ -430,30 +435,27 @@ def dodq(args):
     title = "SEIRQ DQ={}".format(dqlist)
     showpic(title, args)
 
-def dopq():
+def dopq(args):
     # 初期状態
 
     params = []
 
-    x0 = [
-        0.99999999, # s
-        0.0,   # e
-        0.00000001,  # i
-        0.0,    # q
-        0.0     # r
-    ]
-
     pop = 1.2 * 10 ** 8
     xxx = np.linspace(0.0,0.8,10)
     t = np.linspace(0.0, 10000.0, 10000)
+
+    beta, p, f, yq, yr, yqr, tchanged, cure = model.param
+    de, dq, dr, dqr = model.dparam
+    r0              = beta / yr
+
     if True:
         for dq in (3, 5,7,9, 11):
             yq = 1 / dq
             curve = []
             for p in xxx:
                 # params.append((beta, p, f, yq, yr, yqr))
-                param = (beta, p, f, yq, yr, yqr)
-                v = odeint(seiqr, x0, t, args=param)
+                param = (beta, p, f, yq, yr, yqr, 0, 0)
+                v = odeint(model.seiqr, model.x0, t, args=param)
                 s = v[:,0]
                 e = v[:,1]
                 i = v[:,2]
@@ -463,12 +465,42 @@ def dopq():
                 
             plt.plot(xxx, curve, label='Dq={}'.format(dq))
     
-    plt.legend()
-    plt.title('SEIQR R0={} Beta={:.2f} Dr={}'.format(r0, beta, dr))
-    plt.grid('both')
-    plt.yscale('log')
-    plt.show()
+    title = 'SEIQR PQ R0={} Beta={:.2f} Dr={}'.format(r0, beta, dr)
+    showpic(title,args)
 
+def doqp(args):
+    beta, p, f, yq, yr, yqr, tchanged, cure = model.param
+    de, dq, dr, dqr = model.dparam
+    r0              = beta / yr
+    pop = 1.2 * 10 ** 8
+
+    xxx = np.linspace(0.0,0.8,10)
+    t = np.linspace(0.0, 10000.0, 10000)
+
+    dql = (3, 5,7,9, 11)
+    if True:
+        for p in xxx:
+            curve = []
+            for dq in dql:
+                yq = 1 / dq
+                param = (beta, p, f, yq, yr, yqr, 0, 0)
+                v = odeint(model.seiqr, model.x0, t, args=param)
+                s = v[:,0]
+                e = v[:,1]
+                i = v[:,2]
+                q = v[:,3]
+                r = v[:,4]
+                curve.append( np.max( i ) * pop)
+                
+            plt.plot(dql, curve, label='p={:.2f}'.format(p))
+    
+    title = 'SEIQR QP R0={} Beta={:.2f} Dr={}'.format(r0, beta, dr)
+    xlabel = 'Dq'
+    ylabel = 'Max Infected(num of person)'
+    
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    showpic(title,args)
 
 def dojhu(args):
     jhu = realdata(args)
@@ -488,6 +520,8 @@ if __name__ == '__main__':
         dodq(args)
     elif args.pq:
         dopq(args)
+    elif args.qp:
+        doqp(args)
     elif args.jhu:
         dojhu(args)
     elif args.korea:
