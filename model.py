@@ -22,9 +22,11 @@ def doparse():
     parser.add_argument("--qp", action='store_true', help="show Dq graph")
 
     parser.add_argument("-j", "--jhu", action='store_true', help="show jhu")
-    parser.add_argument("-l", "--linear", action='store_true', help="show with linear")
+    parser.add_argument("--datalist", action='store_true', help="show data list")
     parser.add_argument("--korea", action='store_true', help="show korea")
+
     parser.add_argument("-x", "--xrange", type=int, help="x axis range")
+    parser.add_argument("-l", "--linear", action='store_true', help="show with linear")
 
     parser.add_argument("--i", action='store_true', help="show I")
     parser.add_argument("--q", action='store_true', help="show Q")
@@ -36,23 +38,23 @@ def doparse():
 
 
 class realdata:
+    filename = "../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
+    # filename = "..\COVID-19\csse_covid_19_data\csse_covid_19_time_series\time_series_covid19_confirmed_global.csv"
     def __init__(self, args):
         self.tp = None
         self.args = args
         pass
 
     def readit(self, filename):
-        with open(filename, encoding='utf-8') as f:
+        with open(realdata.filename, encoding='utf-8') as f:
             line = f.readline()
             print(line)
         pass
 
     def load_korea(self):
-        # filename = "..\..\COVID-19\csse_covid_19_data\csse_covid_19_time_series\time_series_covid19_confirmed_global.csv"
-        filename = "../../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
         # self.readit(filename)
         # return
-        df = pd.read_csv(filename)
+        df = pd.read_csv(realdata.filename)
         tp = df.transpose()
         indexname = 'Country/Region'
         cols = tp.loc[indexname,]
@@ -71,9 +73,8 @@ class realdata:
         print(korea)
 
     def nation_data(self,nationname):
-        filename = "../../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
         if self.tp == None:
-            df = pd.read_csv(filename)
+            df = pd.read_csv(realdata.filename)
             self.tp = df.transpose()
         
             indexname = 'Country/Region'
@@ -133,15 +134,20 @@ class realdata:
         pop = 5 * 10 ** 7
 
         print( xx, model.param )
-        v = odeint( model.seiqr, model.x0, xx, args = model.param )
+        x0 = model.x0
+        x0[2] = 10 ** -4
+        v = odeint( model.seiqr, x0, xx, args = model.param )
+        
         i = v[:, 2]
         # ax.plot(dx,i[1:] * pop)
-        #ax.plot(dx,v[:-1,0] * pop)
-        #ax.plot(dx,v[:-1,1] * pop)
-        ax.plot(dx,v[:-1,2] * pop)
-        ax.plot(dx,v[:-1,3] * pop)
-        #ax.plot(dx,v[:-1,4] * pop)
-        
+        #ax.plot(dx,v[:-1,0] * pop)   # s
+        #ax.plot(dx,v[:-1,1] * pop)   # e
+        ax.plot(dx,v[:-1,2] * pop, label='i')    # i
+        ax.plot(dx,v[:-1,3] * pop, label='q')    # q
+        ax.plot(dx, model.p * model.yq * v[:-1,2] * pop, label='n')    # n = p * yq * i
+        #ax.plot(dx,v[:-1,4] * pop)   # r
+
+        ax.legend()
         self.show_graph(title)
 
     def formatter(self):
