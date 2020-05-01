@@ -1,5 +1,7 @@
 #-*- coding:utf-8 -*-
 
+from pykakasi import kakasi
+
 import numpy as np
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
@@ -22,12 +24,21 @@ def doparse():
     parser.add_argument("--pq", action='store_true', help="show pq graph")
     parser.add_argument("--qp", action='store_true', help="show Dq graph")
 
+    # JHU
     parser.add_argument("-j", "--jhu", action='store_true', help="show jhu")
     parser.add_argument("--datalist", action='store_true', help="show data list")
     parser.add_argument("--korea", action='store_true', help="show korea")
+    parser.add_argument("--plot", help="plot type, line, bar")
+    parser.add_argument("--nation", nargs='+', help="nation option")
 
+    # SWS
+    parser.add_argument("--sws", action='store_true', help="show sws bar")
+    parser.add_argument("--pref", action='store_true', help="show sws bar")
+    
+    # graph
     parser.add_argument("-x", "--xrange", type=int, help="x axis range")
     parser.add_argument("-l", "--linear", action='store_true', help="show with linear")
+    parser.add_argument("--diff", action='store_true', help="show diff option")
 
     parser.add_argument("--i", action='store_true', help="show I")
     parser.add_argument("--q", action='store_true', help="show Q")
@@ -41,11 +52,127 @@ def doparse():
 class realdata:
     filename = "../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
     # filename = "..\COVID-19\csse_covid_19_data\csse_covid_19_time_series\time_series_covid19_confirmed_global.csv"
+
+    header_colnum = 4
+
+    swsfile = '../2019-ncov-japan/50_Data/resultDailyReport.csv'
+    preffile = '../2019-ncov-japan/50_Data/bydate.csv'
+    
     def __init__(self, args):
         self.tp = None
         self.args = args
         pass
+    
+    def load_pref(self, args):
+        kk = kakasi()
+        kk.setMode('H', 'a')
+        kk.setMode('K', 'a')
+        kk.setMode('J', 'a')
+        conv = kk.getConverter()
 
+        # date,北海道,青森,岩手,宮城,秋田,山形,福島,茨城,栃木,群馬,埼玉,千葉,東京,神奈川,新潟,富山,石川,福井,山梨,長野,岐阜,静岡,愛知,三重,滋賀,京都,大阪,兵庫,奈良,和歌山,鳥取,島根,岡山,広島,山口,徳島,香川,愛媛,高知,福岡,佐賀,長崎,熊本,大分,宮崎,鹿児島,沖縄,チャーター便,検疫職員,クルーズ船,伊客船
+
+        df = pd.read_csv(realdata.preffile)
+        indexname = 'date'
+        prefs = df.columns
+        newcols = []
+        for colname in prefs:
+            alname = conv.do(colname)
+            print (alname, end=" ")
+            newcols.append( alname )
+        # print ( prefs )
+        df.columns = newcols
+
+        objs = ['toukyou']
+        if args.nation:
+            objs = args.nation
+        tokyo = 'toukyou'
+        data = df[tokyo]
+        ndata = len(data)
+        xx = np.linspace(0.0, ndata, ndata)
+        for obj in objs:
+            if args.diff:
+                xx1 = xx[7:]
+                yy = df[obj]
+                yy1 = yy[7:]
+                yy2 = yy[0 : ndata - 7]
+                yy3 = yy1 - yy2
+                print(yy3)
+                print("nxx1={} nyy1={} nyy2={} nyy3={}".format(len(xx1), len(yy1), len(yy2), len(yy3)))
+                # plt.bar(xx1, yy3[0:ndata-7], label=obj)
+                plt.bar(xx, df[obj].diff(7), label=obj)
+                plt.ylabel('Confirmed case: Diff from 7 days ago')
+            else:
+                plt.bar(xx, df[obj], label=obj)
+                plt.ylabel('Confirmed')
+
+        plt.xlabel('Days')
+        plt.legend()
+        plt.show()
+        
+        return df
+
+    def load_sws(self):
+# date,pcr.d,positive.d,symptom.d,symptomless.d,symptomConfirming.d,hospitalize.d,mild.d,severe.d,confirming.d,waiting.d,discharge.d,death.d,pcr.f,positive.f,symptom.f,symptomless.f,symptomConfirming.f,hospitalize.f,mild.f,severe.f,confirming.f,waiting.f,discharge.f,death.f,pcr.x,positive.x,symptom,symptomless,symptomConfirming,hospitalized,mild,severe.x,confirming,waiting,discharge.x,death.x,pcr.y,positive.y,discharge.y,symptomlessDischarge,symptomDischarge,severe.y,death.y,pcr,discharge,pcrDiff,dischargeDiff
+        df = pd.read_csv(realdata.swsfile)
+        pcr = df['pcr.d']
+        positive = df['positive.d']
+        return [positive, pcr]
+
+    def sws(self, args):
+        pos, pcr = self.load_sws()
+        xlen = len(pos)
+        xx = np.linspace(0.0, xlen, xlen)
+
+        fig = plt.figure()
+        ax1  = fig.add_subplot(111)
+
+        ax1.bar(xx, pos.diff(), label='positive')
+        # plt.bar(xx, (pcr-pos).diff(), label='pcr')
+        ax2 = ax1.twinx()
+        ax2.plot(xx, pos/pcr, label='Positive Rate', color='g')
+        title = 'Japan'
+        xlabel = 'Days'
+        ylabel = 'Count'
+        ylabel2 = 'Rate'
+        plt.legend()
+
+        ax1.set_title(title)
+        ax1.set_xlabel(xlabel)
+        ax1.set_ylabel(ylabel)
+        ax2.set_ylabel(ylabel2)
+        plt.show()
+        pass
+
+    def load_data(self):
+        df = pd.read_csv(realdata.filename)
+        tp = df.transpose()
+        indexname = 'Country/Region'
+        cols = tp.loc[indexname,]
+        tp.columns = cols
+        self.tp = tp
+        return tp
+        pass
+        
+    
+    def plot(self, args):
+        tp = self.load_data()
+        nations = args.nation
+        if nations == None or len(nations) <= 0:
+            nations = ['Japan']
+        for nation in nations:
+            dataall = tp[nation]
+            data = dataall[realdata.header_colnum:]
+            ndata = len(data)
+            xx = np.linspace(0.0, ndata, ndata)
+            if args.plot == 'bar':
+                plt.bar(xx, data.diff(), label=nation)
+            else:
+                plt.plot(xx, data, label=nation)
+        plt.ylim(0,)
+        plt.show()
+        pass
+    
     def readit(self, filename):
         with open(realdata.filename, encoding='utf-8') as f:
             line = f.readline()
@@ -536,6 +663,15 @@ if __name__ == '__main__':
     elif args.korea:
         poi = realdata(args)
         poi.load_korea()
+    elif args.plot:
+        rd = realdata(args)
+        rd.plot(args)
+    elif args.sws:
+        rd = realdata(args)
+        rd.sws(args)
+    elif args.pref:
+        rd = realdata(args)
+        rd.load_pref(args)
     else:
         main(args)
 
