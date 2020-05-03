@@ -12,8 +12,26 @@ from scipy.special import comb
 import pylab
 from scipy import stats
 import scipy.stats as st
+import argparse
 
-def domain():
+def doparse():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("-n", type=int, help="option")
+    parser.add_argument("-v", type=int, help="option")
+    parser.add_argument("-p", "--p", type=float, help="p value")
+
+    parser.add_argument("--com", action='store_true', help="com variation")
+
+    parser.add_argument("-d", "--dq", action='store_true', help="variation")
+    parser.add_argument("--pq", action='store_true', help="show pq graph")
+    parser.add_argument("--qp", action='store_true', help="show Dq graph")
+
+
+    args = parser.parse_args()
+    return args
+
+def domain(args):
     sns.set()
 
     n = 60 # 60回の試行
@@ -95,10 +113,28 @@ def domain2():
     print('表が38回回出たときのp値: ',p3)
 
 
+def docom(args):
+    n   = args.n
+    v = args.v
+    p   = args.p
+    
+    ap = stats.binom_test( v, n, p, alternative='greater' )
+    print("ap={} n = {} v = {} p={}".format(ap, n, v, p))
+
+    bot, up = stats.binom.interval(alpha=p, n=n, p= v/n,loc=0)
+    print("(bot,up)=({},{}) = ({:.2f},{:.2f})".format(bot,up,bot/n,up/n))
+
+
+def docom2():
+    pass
+
+    
 if __name__ == '__main__':
-    domain()
-
-
+    args = doparse()
+    if args.com:
+        docom(args)
+    else:
+        domain(args)
 
 #
 # EOF

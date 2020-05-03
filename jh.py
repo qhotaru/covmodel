@@ -14,6 +14,12 @@ from matplotlib.dates import DateFormatter
 from matplotlib.dates import DayLocator
 import seaborn as sns
 
+import json
+
+from matplotlib import rcParams
+rcParams['font.family'] = 'sans-serif'
+rcParams['font.sans-serif'] = ['MS Gothic', 'Hiragino Maru Gothic Pro', 'Yu Gothic', 'Meirio', 'Takao', 'IPAexGothic', 'IPAPGothic', 'VL PGothic', 'Noto Sans CJK JP']
+
 def doparse():
     parser = argparse.ArgumentParser()
 
@@ -34,6 +40,11 @@ def doparse():
     # SWS
     parser.add_argument("--sws", action='store_true', help="show sws bar")
     parser.add_argument("--pref", action='store_true', help="show sws bar")
+    parser.add_argument("--option", help="show sws option")
+
+    # TOKYO
+    parser.add_argument("--tokyo", action='store_true', help="show tokyo")
+
     
     # graph
     parser.add_argument("-x", "--xrange", type=int, help="x axis range")
@@ -52,6 +63,7 @@ def doparse():
 class realdata:
     filename = "../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
     # filename = "..\COVID-19\csse_covid_19_data\csse_covid_19_time_series\time_series_covid19_confirmed_global.csv"
+    tokyofilename = 'd:/ICF_AutoCapsule_disabled/covid/covid19/data/data.json'
 
     header_colnum = 4
 
@@ -63,12 +75,130 @@ class realdata:
         self.args = args
         pass
     
-    def load_pref(self, args):
+    def load_tokyo(self,args):
+        with open(realdata.tokyofilename, encoding='utf-8') as f:
+            tokyodic = json.load(f)
+
+        for k, v in tokyodic.items():
+            if type(v) != dict:
+                print(k,v)
+            elif args.option and args.option == k:
+                # print(k,v)
+                pass
+            else:
+                print(k, v.keys())
+
+        pcrkey = 'inspection_persons'
+        if args.option == pcrkey:
+            self.show_pcr(tokyodic)
+
+        patkey = 'patients_summary'
+        if args.option == patkey:
+            self.show_patients(tokyodic)
+        patstatkey = 'patients'
+        if args.option == patstatkey:
+            self.show_patients_stats(tokyodic)
+
+    def show_patients_stats(self,dic):
+        patstatkey = 'patients'
+        pats = dic[patstatkey]
+        data = pats['data']
+        df = pd.DataFrame(data)
+
+        ds = []
+
+        # print(df['年代'])
+        for d in df['リリース日']:
+            dt = datetime.datetime.strptime(d, '%Y-%m-%dT%H:%M:%S.000Z')
+            month = dt.strftime( '%m' )
+            ds.append(int(month))
+
+        df['month'] = ds
+        mlist = sorted(df['month'].unique())
+
+        # print(df['month'])
+        v = df['年代']
+        self.kakasi_setup()
+        l = []
+        for x in v:
+            l.append( self.kakasi_doconv(x) )
+        df['age'] = l
+        alist =  sorted( df['age'].unique() )
+
+        df2 = pd.DataFrame(alist,index=alist, columns=['age'])
+
+        for m in mlist:
+            poi = []
+            dk = df[df['month'] == m]
+            # print(dk)
+            vc = dk['age'].value_counts()
+            for ix in df2.index:
+                val = 0
+                if ix in vc:
+                    val = vc[ix]
+                poi.append(val)
+            df2[m] = poi
+
+        print(df2)
+
+        bt = None
+        for m in mlist:
+            if type(bt) == type(None):
+                bt = df2[m] - df2[m].values
+                
+            print(bt)
+            plt.bar(df2.index, df2[m], label=str(m), bottom=bt)
+            bt = bt + df2[m].values
+
+        plt.title('Tokyo positives per age group')
+        plt.xlabel('Age Group')
+        plt.ylabel('Numer of Patients')
+        plt.legend()
+        plt.show()
+
+        # plt.legend(["二乗値"], prop={"family":"MS Gothic"})
+
+        pass
+    def show_patients(self,dic):
+        patkey = 'patients_summary'
+        pata   = dic[patkey]
+        data   = pata['data']
+
+        ix = 0
+        for elm in data:
+            if ix % 7 == 0:
+                print("")
+            ix += 1
+            nn = elm['小計']
+            print("{:4}".format(nn), end=" ")
+        
+    def show_pcr(self, dic):
+        pcrkey = 'inspection_persons'
+        inspectp = dic[pcrkey]
+        ds = inspectp['datasets']
+        desc = ds[0]
+        pcr = desc['data']
+        ix = 0
+        for x in pcr:
+            if ix % 7 == 0:
+                print("")
+            ix += 1
+            print( "{:4}".format(x), end=" " )
+        pass
+
+    def kakasi_setup(self):
         kk = kakasi()
         kk.setMode('H', 'a')
         kk.setMode('K', 'a')
         kk.setMode('J', 'a')
-        conv = kk.getConverter()
+        self.conv = kk.getConverter()
+
+    def kakasi_doconv(self, kanji):
+        alnum = self.conv.do(kanji)
+        return alnum
+    
+    def load_pref(self, args):
+        kakasi_setup()
 
         # date,北海道,青森,岩手,宮城,秋田,山形,福島,茨城,栃木,群馬,埼玉,千葉,東京,神奈川,新潟,富山,石川,福井,山梨,長野,岐阜,静岡,愛知,三重,滋賀,京都,大阪,兵庫,奈良,和歌山,鳥取,島根,岡山,広島,山口,徳島,香川,愛媛,高知,福岡,佐賀,長崎,熊本,大分,宮崎,鹿児島,沖縄,チャーター便,検疫職員,クルーズ船,伊客船
 
@@ -77,7 +207,7 @@ class realdata:
         prefs = df.columns
         newcols = []
         for colname in prefs:
-            alname = conv.do(colname)
+            alname = self.kakasi_doconv(colname)
             print (alname, end=" ")
             newcols.append( alname )
         # print ( prefs )
@@ -117,30 +247,67 @@ class realdata:
         df = pd.read_csv(realdata.swsfile)
         pcr = df['pcr.d']
         positive = df['positive.d']
-        return [positive, pcr]
+        xd = df['date']
+        return [xd, positive, pcr]
 
-    def sws(self, args):
-        pos, pcr = self.load_sws()
+    def find_first_value(self, df, border):
+        pos = 0
+        for x in df:
+            if x >= border:
+                return pos
+            pos+=1
+        return -1
+    
+    def swsplot(self, args):
+        xdate, pos, pcr = self.load_sws()
         xlen = len(pos)
         xx = np.linspace(0.0, xlen, xlen)
 
         fig = plt.figure()
         ax1  = fig.add_subplot(111)
 
-        ax1.bar(xx, pos.diff(), label='positive')
-        # plt.bar(xx, (pcr-pos).diff(), label='pcr')
-        ax2 = ax1.twinx()
-        ax2.plot(xx, pos/pcr, label='Positive Rate', color='g')
+        at = self.find_first_value(pos, 50)
+        xticks = list(range(0, xlen, 7))
+        at = 0
+        if at == -1:
+            at == 0
+        else:
+            xx = xx[at:]
+            pos = pos[at:]
+            pcr = pcr[at:]
+
+        print(len(xx), len(pos), len(pcr))
+        rate = pos/pcr
         title = 'Japan'
         xlabel = 'Days'
         ylabel = 'Count'
         ylabel2 = 'Rate'
-        plt.legend()
+
+        if args.diff:
+            ax1.bar(xx, pos.diff().diff(7), label='positive')
+        elif args.option == 'pcr':
+            ax1.bar(xx, pcr.diff(), label='positive')
+        elif args.option == 'rolling_pcr':
+            ax1.plot(xdate, pcr.diff().rolling(7).mean(), label='pcr')
+
+
+            ax2 = ax1.twinx()
+            ax2.xaxis.set_major_locator(DayLocator(bymonthday=None, interval=7, tz=None))
+            ax2.xaxis.set_major_formatter(DateFormatter("%m/%d"))
+            # ax2.set_xticks(xdate[xticks])
+
+            ax2.plot(xdate, pos.diff().rolling(7).mean(), label='positive', color='g')
+            ax2.set_ylabel(ylabel2)
+        else:
+            ax1.bar(xx, pos.diff(), label='positive')
+        # plt.bar(xx, (pcr-pos).diff(), label='pcr')
+        # ax2.plot(xx, rate[at:], label='Positive Rate', color='g')
+        
+        # plt.legend()
 
         ax1.set_title(title)
         ax1.set_xlabel(xlabel)
         ax1.set_ylabel(ylabel)
-        ax2.set_ylabel(ylabel2)
         plt.show()
         pass
 
@@ -155,7 +322,7 @@ class realdata:
         pass
         
     
-    def plot(self, args):
+    def jhuplot(self, args):
         tp = self.load_data()
         nations = args.nation
         if nations == None or len(nations) <= 0:
@@ -648,10 +815,16 @@ if __name__ == '__main__':
     args = doparse()
 
     sns.set()
+
+    # print("Hello")
     
     if args.valiation1:
         dovali1(args)
         pass
+    elif args.tokyo:
+        # print(" do tokyo" )
+        rd = realdata(args)
+        rd.load_tokyo(args)
     elif args.dq:
         dodq(args)
     elif args.pq:
@@ -665,10 +838,10 @@ if __name__ == '__main__':
         poi.load_korea()
     elif args.plot:
         rd = realdata(args)
-        rd.plot(args)
+        rd.jhuplot(args)
     elif args.sws:
         rd = realdata(args)
-        rd.sws(args)
+        rd.swsplot(args)
     elif args.pref:
         rd = realdata(args)
         rd.load_pref(args)

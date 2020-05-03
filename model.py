@@ -12,6 +12,8 @@ from matplotlib.dates import DateFormatter
 from matplotlib.dates import DayLocator
 import seaborn as sns
 
+import json
+
 def doparse():
     parser = argparse.ArgumentParser()
 
@@ -41,11 +43,19 @@ def doparse():
 class realdata:
     filename = "../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
     # filename = "..\COVID-19\csse_covid_19_data\csse_covid_19_time_series\time_series_covid19_confirmed_global.csv"
+    tokyofilename = 'd:/ICF_AutoCapsule_disabled/covid/covid19/data/data.json'
     def __init__(self, args):
         self.tp = None
         self.args = args
         pass
 
+    def load_tokyo(self,args):
+        with open(realdata.tokyofilename, encoding='utf-8') as f:
+            tokyodic = json.load(f)
+            for k, v in tokyodic.items():
+                print(k, v)
+        pass
+    
     def readit(self, filename):
         with open(realdata.filename, encoding='utf-8') as f:
             line = f.readline()
