@@ -163,6 +163,7 @@ class realdata:
         patkey = 'patients_summary'
         pata   = dic[patkey]
         data   = pata['data']
+        positive = []
 
         ix = 0
         for elm in data:
@@ -171,6 +172,18 @@ class realdata:
             ix += 1
             nn = elm['小計']
             print("{:4}".format(nn), end=" ")
+            positive.append(nn)
+
+        ofs = 50
+        df = pd.DataFrame(positive, columns=['new'])
+        xx = np.linspace(0,len(data), len(data))
+        plt.bar(xx[ofs:], df['new'][ofs:].rolling(7).mean(), label='positive')
+        title = 'Tokyo Newly confirmed rolling 7 days average'
+        plt.title(title)
+        plt.ylabel('Person')
+        plt.xlabel('Days')
+        plt.legend()
+        plt.show()
         
     def show_pcr(self, dic):
         pcrkey = 'inspection_persons'
