@@ -94,11 +94,14 @@ class realdata:
 
         patkey = 'patients_summary'
         if args.option == patkey:
-            self.show_patients(tokyodic)
+            self.show_patients_summary(tokyodic)
         patstatkey = 'patients'
         if args.option == patstatkey:
             self.show_patients_stats(tokyodic)
 
+    def compare_age(self):
+        pass
+        
     def show_patients_stats(self,dic):
         patstatkey = 'patients'
         pats = dic[patstatkey]
@@ -121,9 +124,14 @@ class realdata:
         self.kakasi_setup()
         l = []
         for x in v:
-            l.append( self.kakasi_doconv(x) )
+            wamei = self.kakasi_doconv(x)
+            wamei2 = wamei.replace('dai','-')
+            wamei3 = wamei2.replace('10toshimiman','0-9')
+            wamei4 = wamei3.replace('100toshiijou','>100')
+            l.append( wamei4 )
         df['age'] = l
         alist =  sorted( df['age'].unique() )
+        # alist =  sorted( df['age'].unique(), key=int )
 
         df2 = pd.DataFrame(alist,index=alist, columns=['age'])
 
@@ -152,34 +160,48 @@ class realdata:
 
         plt.title('Tokyo positives per age group')
         plt.xlabel('Age Group')
-        plt.ylabel('Numer of Patients')
+        plt.ylabel('Numer of positives')
         plt.legend()
         plt.show()
 
         # plt.legend(["二乗値"], prop={"family":"MS Gothic"})
 
         pass
-    def show_patients(self,dic):
+    def show_patients_summary(self,dic):
         patkey = 'patients_summary'
         pata   = dic[patkey]
         data   = pata['data']
         positive = []
+        datemark = []
 
         ix = 0
         for elm in data:
             if ix % 7 == 0:
                 print("")
             ix += 1
+            dd = elm['日付']
+            dt = datetime.datetime.strptime(dd, '%Y-%m-%dT%H:%M:%S.000Z')
+            md = dt.strftime( '%m/%d' )
+
             nn = elm['小計']
             print("{:4}".format(nn), end=" ")
             positive.append(nn)
+            datemark.append(md)
 
         ofs = 50
-        df = pd.DataFrame(positive, columns=['new'])
+        df = pd.DataFrame(positive, columns=['positive'])
+        df['date'] = datemark
         xx = np.linspace(0,len(data), len(data))
-        plt.bar(xx[ofs:], df['new'][ofs:].rolling(7).mean(), label='positive')
-        title = 'Tokyo Newly confirmed rolling 7 days average'
-        plt.title(title)
+        # plt.bar(xx[ofs:], df['positive'][ofs:].rolling(7).mean(), label='positive')
+        plt.bar(datemark[ofs:], df['positive'][ofs:].rolling(7).mean(), label='positive')
+        # plt.bar(xx[ofs:], df['new'][ofs:].rolling(3).mean(), label='positive')
+        title7 = 'Tokyo Newly confirmed rolling 7 days average'
+        title3 = 'Tokyo Newly confirmed rolling 3 days average'
+
+        xt = datemark[ofs::7]
+        plt.xticks(xt)
+        
+        plt.title(title7)
         plt.ylabel('Person')
         plt.xlabel('Days')
         plt.legend()
