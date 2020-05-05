@@ -396,9 +396,11 @@ class realdata:
             ax.set_ylim(ymin=0, ymax=6000)
 
             ax2 = ax.twinx()
+
+            ax2.plot(df1['ts'][ofs:], df1['positive'][ofs:].diff().rolling(7).mean(), label='positive rolling 7days', color='r')
+
             ax2.xaxis.set_major_locator(DayLocator(bymonthday=None, interval=7, tz=None))
             ax2.xaxis.set_major_formatter(DateFormatter("%m/%d"))
-            ax2.plot(df1['ts'][ofs:], df1['positive'][ofs:].diff().rolling(7).mean(), label='positive rolling 7days', color='r')
             ax2.set_ylim(ymin=0)
         
             ax.legend(loc='upper left')
