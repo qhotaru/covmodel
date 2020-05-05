@@ -30,6 +30,10 @@ def doparse():
     parser.add_argument("--pq", action='store_true', help="show pq graph")
     parser.add_argument("--qp", action='store_true', help="show Dq graph")
 
+    # JAG JAPAN
+    parser.add_argument("--jag", action='store_true', help="show jag")
+
+    
     # JHU
     parser.add_argument("-j", "--jhu", action='store_true', help="show jhu")
     parser.add_argument("--datalist", action='store_true', help="show data list")
@@ -41,9 +45,11 @@ def doparse():
     parser.add_argument("--sws", action='store_true', help="show sws bar")
     parser.add_argument("--pref", action='store_true', help="show sws bar")
     parser.add_argument("--option", help="show sws option")
+    parser.add_argument("--domestic", action='store_true', help="show domestic data")
 
     # TOKYO
     parser.add_argument("--tokyo", action='store_true', help="show tokyo")
+    parser.add_argument("--death", action='store_true', help="show tokyo death")
 
     
     # graph
@@ -68,12 +74,81 @@ class realdata:
     header_colnum = 4
 
     swsfile = '../2019-ncov-japan/50_Data/resultDailyReport.csv'
+    swsdomesticfile = '../2019-ncov-japan/50_Data/domesticDailyReport.csv'
     preffile = '../2019-ncov-japan/50_Data/bydate.csv'
+
+    jagfile = 'data/COVID-19.csv'
     
     def __init__(self, args):
         self.tp = None
         self.args = args
         pass
+
+    def load_jag(self, args):
+        df1 = pd.read_csv(realdata.jagfile)
+        colnames = df1.columns
+        # print( df )
+        print( colnames )
+        # print( df1['受診都道府県'].value_counts() )
+
+        df = df1[df1['受診都道府県'] == '東京都']
+        # print(df)
+        # return
+    
+        kakutei = df['確定日']
+        onset = df['発症日']
+        pcrperson = df['PCR検査実施人数']
+        xx = np.linspace(0.0, len(pcrperson)-1, len(pcrperson))
+        # vc = pcrperson.value_counts()
+        vc = pcrperson.unique()
+        print(vc)
+        pcrperson = pcrperson.dropna()
+        print( pcrperson )
+        
+        plt.bar(kakutei, pcrperson, label='pcr')
+        plt.show()
+        return 
+        
+        # print( kakutei.value_counts() )
+        # print( onset.value_counts() )
+        vck = kakutei.value_counts()
+        sk  = sorted( vck.keys() )
+        dkl = []
+        for dk in sk:
+            # print(dk, vck[dk])
+            dkl.append(vck[dk])
+
+        # plt.plot(sk, dkl, label='reported')
+
+        # print( onset.unique() )
+        
+        vc = onset.value_counts()
+        od = []
+        odic = {}
+        osum = 0
+        for o in vc.keys():
+            dt = datetime.datetime.strptime(o, '%m/%d/%Y')
+            od.append( dt )
+            odic[dt] = o
+
+        ss = sorted( od )
+        dl = []
+        for d in ss:
+            dd = odic[d]
+            print(d, vc[dd])
+            dl.append(vc[dd])
+            osum += vc[dd]
+
+        print( "sum = {}".format( osum ) )
+        xticks = ss[::7]
+        # plt.xticks(xticks)
+
+        xl = len(ss)
+        xx = np.linspace(0.0,xl-1, xl)
+        # plt.bar(ss,dl,label='onset', color='g')
+        plt.bar(xx,dl,label='onset', color='g')
+        plt.legend()
+        plt.show()
     
     def load_tokyo(self,args):
         with open(realdata.tokyofilename, encoding='utf-8') as f:
@@ -98,9 +173,27 @@ class realdata:
         patstatkey = 'patients'
         if args.option == patstatkey:
             self.show_patients_stats(tokyodic)
+            if args.death:
+                self.show_death(tokyodic)
 
-    def compare_age(self):
+        
+    def compare_age(self, dic):
         pass
+
+    def show_death(self, dic):
+        patstatkey = 'patients'
+        pats = dic[patstatkey]
+        data = pats['data']
+        df = pd.DataFrame(data)
+
+        ndischarged = len(df['退院'])
+
+        sum = 0
+        for k, v in df['退院'].value_counts().iteritems():
+            print( k, v )
+            sum += v
+        pass
+        print( "Total {}, threst {}".format( ndischarged, ndischared - sum ))
         
     def show_patients_stats(self,dic):
         patstatkey = 'patients'
@@ -221,6 +314,11 @@ class realdata:
             print( "{:4}".format(x), end=" " )
         pass
 
+        xx = np.linspace(0.0,len(pcr)-1,len(pcr))
+        ofs = 20
+        plt.bar(xx[ofs:],pcr[ofs:])
+        plt.show()
+
     def kakasi_setup(self):
         kk = kakasi()
         kk.setMode('H', 'a')
@@ -277,6 +375,52 @@ class realdata:
         
         return df
 
+    
+    def load_domestic(self, args):
+# date,pcr,positive,symptom,symptomless,symptomConfirming,hospitalize,mild,severe,confirming,waiting,discharge,death
+        df1 = pd.read_csv(realdata.swsdomesticfile)
+        df1['ts'] = pd.to_datetime(df1['date'], format='%Y%m%d')
+        print( df1 )
+        xticks = df1['ts'][::7]
+        ax = plt.subplot(1,1,1)
+
+        ax.xaxis.set_major_locator(DayLocator(bymonthday=None, interval=7, tz=None))
+        ax.xaxis.set_major_formatter(DateFormatter("%m/%d"))
+        ofs = 30
+
+
+        if True:
+            diff = df1['pcr'][ofs:].diff()
+            ax.bar(df1['ts'][ofs:], diff.rolling(7).mean(), label='PCR Rolling 7 days', color='y')
+            # ax.plot(df1['ts'][ofs:], diff, label='Daily PCR data', color='r')
+            ax.set_ylim(ymin=0, ymax=6000)
+
+            ax2 = ax.twinx()
+            ax2.xaxis.set_major_locator(DayLocator(bymonthday=None, interval=7, tz=None))
+            ax2.xaxis.set_major_formatter(DateFormatter("%m/%d"))
+            ax2.plot(df1['ts'][ofs:], df1['positive'][ofs:].diff().rolling(7).mean(), label='positive rolling 7days', color='r')
+            ax2.set_ylim(ymin=0)
+        
+            ax.legend(loc='upper left')
+            ax2.legend(loc='upper right')
+            ax2.set_ylabel('Positive Person')
+        else:
+            pcraday  = df1['pcr'][ofs:].diff().rolling(7).mean()
+            posiaday = df1['positive'][ofs:].diff().rolling(7).mean()
+
+            ax.bar(df1['ts'][ofs:], posiaday, label='Positive Rolling 7 days')
+
+            # ax.bar(df1['ts'][ofs:], pcraday - posiaday.values, label='PCR Rolling 7 days', bottom=posiaday)
+            ax.plot(df1['ts'][ofs:], pcraday - posiaday.values, label='PCR Rolling 7 days')
+            ax.legend(loc='upper left')
+
+        ax.set_title('Japan Positive and PCR test rolling 7 days average from MLHW Japan')
+        ax.set_xlabel('Day')
+        ax.set_ylabel('PCR Test Person')
+        plt.show()
+        return df1
+
+
     def load_sws(self):
 # date,pcr.d,positive.d,symptom.d,symptomless.d,symptomConfirming.d,hospitalize.d,mild.d,severe.d,confirming.d,waiting.d,discharge.d,death.d,pcr.f,positive.f,symptom.f,symptomless.f,symptomConfirming.f,hospitalize.f,mild.f,severe.f,confirming.f,waiting.f,discharge.f,death.f,pcr.x,positive.x,symptom,symptomless,symptomConfirming,hospitalized,mild,severe.x,confirming,waiting,discharge.x,death.x,pcr.y,positive.y,discharge.y,symptomlessDischarge,symptomDischarge,severe.y,death.y,pcr,discharge,pcrDiff,dischargeDiff
         df = pd.read_csv(realdata.swsfile)
@@ -324,7 +468,6 @@ class realdata:
             ax1.bar(xx, pcr.diff(), label='positive')
         elif args.option == 'rolling_pcr':
             ax1.plot(xdate, pcr.diff().rolling(7).mean(), label='pcr')
-
 
             ax2 = ax1.twinx()
             ax2.xaxis.set_major_locator(DayLocator(bymonthday=None, interval=7, tz=None))
@@ -880,6 +1023,12 @@ if __name__ == '__main__':
     elif args.pref:
         rd = realdata(args)
         rd.load_pref(args)
+    elif args.jag:
+        rd = realdata(args)
+        rd.load_jag(args)
+    elif args.domestic:
+        rd = realdata(args)
+        rd.load_domestic(args)
     else:
         main(args)
 
