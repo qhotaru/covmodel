@@ -17,4 +17,4 @@ for x in $b ; do
   cd ../..
 done
 
-curl -O https://dl.dropboxusercontent.com/s/6mztoeb6xf78g5w/COVID-19.csv
+# curl -O https://dl.dropboxusercontent.com/s/6mztoeb6xf78g5w/COVID-19.csv
