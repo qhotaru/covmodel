@@ -55,6 +55,9 @@ def doparse():
     parser.add_argument("--tokyo", action='store_true', help="show tokyo")
     parser.add_argument("--death", action='store_true', help="show tokyo death")
 
+    # TOKYO option
+    parser.add_argument("--save", action='store_true', help="save tokyo csv")
+
     
     # graph
     parser.add_argument("-x", "--xrange", type=int, help="x axis range")
@@ -73,7 +76,7 @@ def doparse():
 class realdata:
     filename = "../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
     death_filename = "../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
-    # filename = "..\COVID-19\csse_covid_19_data\csse_covid_19_time_series\time_series_covid19_confirmed_global.csv"
+
     tokyofilename = 'd:/ICF_AutoCapsule_disabled/covid/covid19/data/data.json'
 
     header_colnum = 4
@@ -168,6 +171,9 @@ class realdata:
             else:
                 print(k, v.keys())
 
+        if args.save:
+            return self.tokyo_save(tokyodic)
+        
         pcrkey = 'inspection_persons'
         if args.option == pcrkey:
             self.show_pcr(tokyodic)
@@ -265,7 +271,8 @@ class realdata:
         # plt.legend(["二乗値"], prop={"family":"MS Gothic"})
 
         pass
-    def show_patients_summary(self,dic):
+
+    def show_patients_summary(self, dic):
         patkey = 'patients_summary'
         pata   = dic[patkey]
         data   = pata['data']
@@ -305,6 +312,52 @@ class realdata:
         plt.legend()
         plt.show()
         
+    def tokyo_save(self, dic):
+        patkey = 'patients_summary'
+        pata   = dic[patkey]
+        data   = pata['data']
+        positive = []
+        datemark = []
+
+        ix = 0
+        for elm in data:
+            if ix % 7 == 0:
+                print("")
+            ix += 1
+            dd = elm['日付']
+            dt = datetime.datetime.strptime(dd, '%Y-%m-%dT%H:%M:%S.000Z')
+            md = dt.strftime( '%m/%d' )
+
+            nn = elm['小計']
+            print("{:4}".format(nn), end=" ")
+            positive.append(nn)
+            datemark.append(md)
+
+        ofs = 50
+        for ix in range(ofs, len(positive)):
+            print( "\'{}\',{}".format(datemark[ix], positive[ix]))
+
+        return None
+
+        
+        df = pd.DataFrame(positive, columns=['positive'])
+        df['date'] = datemark
+        xx = np.linspace(0,len(data), len(data))
+        # plt.bar(xx[ofs:], df['positive'][ofs:].rolling(7).mean(), label='positive')
+        plt.bar(datemark[ofs:], df['positive'][ofs:].rolling(7).mean(), label='positive')
+        # plt.bar(xx[ofs:], df['new'][ofs:].rolling(3).mean(), label='positive')
+        title7 = 'Tokyo Newly confirmed rolling 7 days average'
+        title3 = 'Tokyo Newly confirmed rolling 3 days average'
+
+        xt = datemark[ofs::7]
+        plt.xticks(xt)
+        
+        plt.title(title7)
+        plt.ylabel('Person')
+        plt.xlabel('Days')
+        plt.legend()
+        plt.show()
+
     def show_pcr(self, dic):
         pcrkey = 'inspection_persons'
         inspectp = dic[pcrkey]
