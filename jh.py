@@ -17,6 +17,7 @@ import seaborn as sns
 import json
 
 from matplotlib import rcParams
+
 rcParams['font.family'] = 'sans-serif'
 rcParams['font.sans-serif'] = ['MS Gothic', 'Hiragino Maru Gothic Pro', 'Yu Gothic', 'Meirio', 'Takao', 'IPAexGothic', 'IPAPGothic', 'VL PGothic', 'Noto Sans CJK JP']
 
@@ -33,10 +34,10 @@ def doparse():
     # JAG JAPAN
     parser.add_argument("--jag", action='store_true', help="show jag")
 
-    
     # JHU
     parser.add_argument("-j", "--jhu", action='store_true', help="show jhu")
     parser.add_argument("--datalist", action='store_true', help="show data list")
+    parser.add_argument("--jhulast", action='store_true', help="show jhu last")
     parser.add_argument("--korea", action='store_true', help="show korea")
     parser.add_argument("--plot", help="plot type, line, bar")
     parser.add_argument("--nation", nargs='+', help="nation option")
@@ -68,6 +69,7 @@ def doparse():
 
 class realdata:
     filename = "../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
+    death_filename = "../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
     # filename = "..\COVID-19\csse_covid_19_data\csse_covid_19_time_series\time_series_covid19_confirmed_global.csv"
     tokyofilename = 'd:/ICF_AutoCapsule_disabled/covid/covid19/data/data.json'
 
@@ -491,12 +493,21 @@ class realdata:
         plt.show()
         pass
 
-    def load_data(self):
-        df = pd.read_csv(realdata.filename)
+    def load_data(self, filename = None):
+        if filename == None:
+            filename = realdata.filename
+        df = pd.read_csv( filename )
+        ocols = df.columns
+        print( ocols )
         tp = df.transpose()
         indexname = 'Country/Region'
         cols = tp.loc[indexname,]
         tp.columns = cols
+        tp.index = ocols
+
+        # prov = tp.loc[:,'Provice/State',]
+        # print( prov )
+
         self.tp = tp
         return tp
         pass
@@ -517,6 +528,60 @@ class realdata:
             else:
                 plt.plot(xx, data, label=nation)
         plt.ylim(0,)
+        plt.show()
+        pass
+
+    def jhulastplot(self, args):
+
+        pop = { 'Japan' : 1.3 ,
+                'Korea, South' : 0.6,
+                'Vietnam' : 0.9,
+                'Philippines' : 1,
+                # 'China' : 14,
+                'Malaysia' : 1,
+                'Singapore' : 0.1,
+                # 'New Zealand' : 0.1,
+                # 'Australia' : 0.2,
+                }
+        
+        tp = self.load_data( realdata.death_filename )
+        if args.datalist:
+            print( tp.columns )
+        
+        nations = args.nation
+        if nations == None or len(nations) <= 0:
+            # nations = ['Japan']
+            nations = pop.keys()
+        for nation in nations:
+            dataall = tp[nation]
+            dates = tp.index
+            dates = dates[4:]
+            # print( dates )
+
+            z = dataall.loc['Province/State',]
+            if False: # z != None and len(z)>1:
+                print(z)
+                v = dataall.sum()
+                print(v)
+
+            data = dataall[ realdata.header_colnum: ]
+            ndata = len(data)
+            xx = np.linspace(0.0, ndata, ndata)
+            ofs = 40
+            xticks = dates[ofs:][::14]
+            if args.plot == 'bar':
+                plt.bar(dates[ofs:], data[ofs:].diff(), label=nation)
+            else:
+                plt.plot(dates[ofs:], data[ofs:], label=nation)
+
+
+        plt.xticks(xticks)
+
+        plt.ylim(0,)
+        title = 'Confirmed death by JHU, Asian Nations'
+        plt.title(title)
+
+        plt.legend()
         plt.show()
         pass
     
@@ -1019,6 +1084,9 @@ if __name__ == '__main__':
     elif args.plot:
         rd = realdata(args)
         rd.jhuplot(args)
+    elif args.jhulast:
+        rd = realdata(args)
+        rd.jhulastplot(args)
     elif args.sws:
         rd = realdata(args)
         rd.swsplot(args)

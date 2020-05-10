@@ -35,7 +35,6 @@ def doparse():
     parser.add_argument("--q", action='store_true', help="show Q")
     parser.add_argument("--n", action='store_true', help="show N")
 
-    
     args = parser.parse_args()
     return args
 
