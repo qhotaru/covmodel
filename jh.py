@@ -40,7 +40,10 @@ def doparse():
     parser.add_argument("--jhulast", action='store_true', help="show jhu last")
     parser.add_argument("--korea", action='store_true', help="show korea")
     parser.add_argument("--plot", help="plot type, line, bar")
+
+    # JHU option
     parser.add_argument("--nation", nargs='+', help="nation option")
+    parser.add_argument("--pop", action='store_true', help="option pop")
 
     # SWS
     parser.add_argument("--sws", action='store_true', help="show sws bar")
@@ -531,7 +534,7 @@ class realdata:
         plt.show()
         pass
 
-    def jhulastplot(self, args):
+    def jhulastplot1(self, args):
 
         pop = { 'Japan' : 1.3 ,
                 'Korea, South' : 0.6,
@@ -582,6 +585,67 @@ class realdata:
         plt.title(title)
 
         plt.legend()
+        plt.show()
+        pass
+    
+    def jhulastplot(self, args):
+
+        pop_dic = { 'Japan' : 1.265 ,
+                'Korea, South' : 0.518,
+                'Vietnam' : 0.955,
+                'Philippines' : 1.06,
+                # 'China' : 14,
+                'Malaysia' : 0.315,
+                'Singapore' : 0.0563,
+                # 'New Zealand' : 0.0488,
+                # 'Australia' : 0.2499,
+                }
+        
+        tp = self.load_data( realdata.death_filename )
+        if args.datalist:
+            print( tp.columns )
+        
+        nations = args.nation
+        if nations == None or len(nations) <= 0:
+            # nations = ['Japan']
+            nations = pop_dic.keys()
+        for nation in nations:
+            dataall = tp[nation]
+            dates = tp.index
+            dates = dates[realdata.header_colnum:]
+            # print( dates )
+
+            pop = 1
+            if args.pop and nation in pop_dic:
+                pop = pop_dic[nation] * 100
+
+            z = dataall.loc['Province/State',]
+            if False: # z != None and len(z)>1:
+                print(z)
+                v = dataall.sum()
+                print(v)
+
+            data = dataall[ realdata.header_colnum: ]
+            ndata = len(data)
+            xx = np.linspace(0.0, ndata, ndata)
+            ofs = 40
+            xticks = dates[ofs:][::14]
+            if args.plot == 'bar':
+                plt.bar(dates[ofs:], data[ofs:].diff() / pop, label=nation)
+            else:
+                plt.plot(dates[ofs:], data[ofs:] / pop, label=nation)
+
+        ylabel = 'Number of Confirmed Death'
+        title = 'Confirmed death by JHU, Asian Nations'
+        if args.pop:
+            title = 'Confirmed death per million by JHU, Asian Nations'
+            ylabel = 'Number of Confirmed Death per million'
+
+        plt.xticks(xticks)
+        plt.ylim(0,)
+        plt.ylabel(ylabel)
+        plt.legend()
+        plt.title(title)
         plt.show()
         pass
     

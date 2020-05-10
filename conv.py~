@@ -1,0 +1,28 @@
+import codecs
+import io
+
+src_file_path = "./sjis.txt"
+src_codec = codecs.lookup("shift_jis") # 変換前の文字コード
+
+dest_file_path = "./out-utf8.txt"
+dest_codec = codecs.lookup("utf_8") # 変換後の文字コード
+
+
+# ファイルオブジェクトを開く
+with open(src_file_path, "rb") as src, open(dest_file_path, "wb") as dest:
+
+    # 変換ストリームを作成
+    stream = codecs.StreamRecoder(
+        src,
+        dest_codec.encode, src_codec.decode,
+        src_codec.streamreader, dest_codec.streamwriter,
+    )
+    reader = io.BufferedReader(stream)
+
+    # 書き込み
+    while True:
+        data = reader.read1()
+        if not data:
+            break
+        dest.write(data)
+        dest.flush()
