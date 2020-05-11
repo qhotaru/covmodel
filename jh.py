@@ -44,6 +44,8 @@ def doparse():
     # JHU option
     parser.add_argument("--nation", nargs='+', help="nation option")
     parser.add_argument("--pop", action='store_true', help="option pop")
+    parser.add_argument("--new", action='store_true', help="option new")
+    parser.add_argument("--rolling", action='store_true', help="option rolling")
 
     # SWS
     parser.add_argument("--sws", action='store_true', help="show sws bar")
@@ -68,29 +70,33 @@ def doparse():
     parser.add_argument("--q", action='store_true', help="show Q")
     parser.add_argument("--n", action='store_true', help="show N")
 
-    
     args = parser.parse_args()
     return args
 
 
 class realdata:
-    filename = "../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
-    death_filename = "../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
-
-    tokyofilename = 'd:/ICF_AutoCapsule_disabled/covid/covid19/data/data.json'
-
-    header_colnum = 4
-
-    swsfile = '../2019-ncov-japan/50_Data/resultDailyReport.csv'
+    filename        = "../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
+    death_filename  = "../COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
+    tokyofilename   = 'd:/ICF_AutoCapsule_disabled/covid/covid19/data/data.json'
+    header_colnum   = 4
+    swsfile         = '../2019-ncov-japan/50_Data/resultDailyReport.csv'
     swsdomesticfile = '../2019-ncov-japan/50_Data/domesticDailyReport.csv'
-    preffile = '../2019-ncov-japan/50_Data/bydate.csv'
+    preffile        = '../2019-ncov-japan/50_Data/bydate.csv'
+    jagfile         = 'data/COVID-19.csv'
+    pop_dic         = { 'Japan' : 1.265 ,
+                        'Korea, South' : 0.518,
+                        'Vietnam' : 0.955,
+                        'Philippines' : 1.06,
+                        # 'China' : 14,
+                        'Malaysia' : 0.315,
+                        'Singapore' : 0.0563,
+                        # 'New Zealand' : 0.0488,
+                        # 'Australia' : 0.2499,
+    }
 
-    jagfile = 'data/COVID-19.csv'
-    
     def __init__(self, args):
         self.tp = None
         self.args = args
-        pass
 
     def load_jag(self, args):
         df1 = pd.read_csv(realdata.jagfile)
@@ -554,7 +560,7 @@ class realdata:
             filename = realdata.filename
         df = pd.read_csv( filename )
         ocols = df.columns
-        print( ocols )
+        # print( ocols )
         tp = df.transpose()
         indexname = 'Country/Region'
         cols = tp.loc[indexname,]
@@ -566,8 +572,6 @@ class realdata:
 
         self.tp = tp
         return tp
-        pass
-        
     
     def jhuplot(self, args):
         tp = self.load_data()
@@ -639,61 +643,55 @@ class realdata:
 
         plt.legend()
         plt.show()
-        pass
     
     def jhulastplot(self, args):
+        ofs = 40
 
-        pop_dic = { 'Japan' : 1.265 ,
-                'Korea, South' : 0.518,
-                'Vietnam' : 0.955,
-                'Philippines' : 1.06,
-                # 'China' : 14,
-                'Malaysia' : 0.315,
-                'Singapore' : 0.0563,
-                # 'New Zealand' : 0.0488,
-                # 'Australia' : 0.2499,
-                }
-        
-        tp = self.load_data( realdata.death_filename )
+        if args.death:
+            fname = realdata.death_filename
+        else:
+            fname = realdata.filename
+        tp = self.load_data( fname )
         if args.datalist:
             print( tp.columns )
         
         nations = args.nation
         if nations == None or len(nations) <= 0:
             # nations = ['Japan']
-            nations = pop_dic.keys()
+            nations = realdata.pop_dic.keys()
         for nation in nations:
             dataall = tp[nation]
             dates = tp.index
-            dates = dates[realdata.header_colnum:]
+            # dates = dates[realdata.header_colnum:]
+            dates = dates[realdata.header_colnum:].map(
+                lambda d: datetime.datetime.strptime(d,'%m/%d/%y').strftime('%m/%d')
+            )
             # print( dates )
 
             pop = 1
-            if args.pop and nation in pop_dic:
-                pop = pop_dic[nation] * 100
+            if args.pop and nation in realdata.pop_dic:
+                pop = realdata.pop_dic[nation] * 100 # to per million
 
-            z = dataall.loc['Province/State',]
-            if False: # z != None and len(z)>1:
-                print(z)
-                v = dataall.sum()
-                print(v)
-
-            data = dataall[ realdata.header_colnum: ]
-            ndata = len(data)
-            xx = np.linspace(0.0, ndata, ndata)
-            ofs = 40
-            xticks = dates[ofs:][::14]
-            if args.plot == 'bar':
-                plt.bar(dates[ofs:], data[ofs:].diff() / pop, label=nation)
-            else:
+            data   = dataall[ realdata.header_colnum: ]
+            ndata  = len(data)
+            xx     = np.linspace(0.0, ndata, ndata)
+            xticks = dates[ofs:][::7]
+            if not args.new:
                 plt.plot(dates[ofs:], data[ofs:] / pop, label=nation)
+            elif args.rolling:
+                plt.bar(dates[ofs:], data[ofs:].diff().rolling(7).mean() / pop, label=nation)
+            else:
+                plt.bar(dates[ofs:], data[ofs:].diff()/ pop, label=nation)
 
-        ylabel = 'Number of Confirmed Death'
-        title = 'Confirmed death by JHU, Asian Nations'
-        if args.pop:
-            title = 'Confirmed death per million by JHU, Asian Nations'
-            ylabel = 'Number of Confirmed Death per million'
 
+        obj = 'Death' if args.death else 'Cases'
+        note = ' per million' if args.pop else ''
+        title = 'Confirmed ' + obj + note + ' by JHU, Asian Nations'
+        ylabel = 'Number of Confirmed ' + obj + note
+
+        if not args.linear:
+            plt.yscale('log')
+        
         plt.xticks(xticks)
         plt.ylim(0,)
         plt.ylabel(ylabel)
