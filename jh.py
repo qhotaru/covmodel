@@ -634,10 +634,10 @@ class realdata:
             else:
                 plt.plot(dates[ofs:], data[ofs:], label=nation)
 
-
         plt.xticks(xticks)
 
-        plt.ylim(0,)
+        if args.linear:
+            plt.ylim(0,)
         title = 'Confirmed death by JHU, Asian Nations'
         plt.title(title)
 
@@ -651,6 +651,7 @@ class realdata:
             fname = realdata.death_filename
         else:
             fname = realdata.filename
+            dname = realdata.death_filename
         tp = self.load_data( fname )
         if args.datalist:
             print( tp.columns )
@@ -681,7 +682,14 @@ class realdata:
             elif args.rolling:
                 plt.bar(dates[ofs:], data[ofs:].diff().rolling(7).mean() / pop, label=nation)
             else:
-                plt.bar(dates[ofs:], data[ofs:].diff()/ pop, label=nation)
+                dh = self.load_data( dname )
+                indexname     = 'Country/Region'
+                death       = dh[realdata.header_colnum:]
+                dtp         = death[nation]
+                # plt.bar(dates[ofs:], (data[ofs:].diff() - dtp[ofs:].diff().values) / pop, label=nation, bottom=dtp[ofs:].diff()*10, color='g')
+                # plt.bar(dates[ofs:], (data[ofs:].diff() - dtp[ofs:].diff().values) / pop, label=nation, bottom=dtp[ofs:].diff(), color='g')
+                plt.bar(dates[ofs:], data[ofs:].diff() / pop, label=nation, color='g' )
+                plt.plot(dates[ofs:], dtp[ofs:].diff() / pop, label=f"{nation}-death", color='r')
 
 
         obj = 'Death' if args.death else 'Cases'
@@ -693,12 +701,12 @@ class realdata:
             plt.yscale('log')
         
         plt.xticks(xticks)
-        plt.ylim(0,)
+        if args.linear:
+            plt.ylim(0,)
         plt.ylabel(ylabel)
         plt.legend()
         plt.title(title)
         plt.show()
-        pass
     
     def readit(self, filename):
         with open(realdata.filename, encoding='utf-8') as f:
