@@ -90,6 +90,7 @@ class realdata:
                         # 'China' : 14,
                         'Malaysia' : 0.315,
                         'Singapore' : 0.0563,
+                        'Indonesia' : 2.678,
                         # 'New Zealand' : 0.0488,
                         # 'Australia' : 0.2499,
     }
