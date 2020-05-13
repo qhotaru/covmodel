@@ -194,7 +194,6 @@ class realdata:
             if args.death:
                 self.show_death(tokyodic)
 
-        
     def compare_age(self, dic):
         pass
 
@@ -439,7 +438,6 @@ class realdata:
         plt.show()
         
         return df
-
     
     def load_domestic(self, args):
 # date,pcr,positive,symptom,symptomless,symptomConfirming,hospitalize,mild,severe,confirming,waiting,discharge,death
@@ -452,7 +450,6 @@ class realdata:
         ax.xaxis.set_major_locator(DayLocator(bymonthday=None, interval=7, tz=None))
         ax.xaxis.set_major_formatter(DateFormatter("%m/%d"))
         ofs = 30
-
 
         if True:
             diff = df1['pcr'][ofs:].diff()
@@ -650,6 +647,7 @@ class realdata:
 
         if args.death:
             fname = realdata.death_filename
+            dname = realdata.death_filename
         else:
             fname = realdata.filename
             dname = realdata.death_filename
@@ -690,6 +688,7 @@ class realdata:
                 # plt.bar(dates[ofs:], (data[ofs:].diff() - dtp[ofs:].diff().values) / pop, label=nation, bottom=dtp[ofs:].diff()*10, color='g')
                 # plt.bar(dates[ofs:], (data[ofs:].diff() - dtp[ofs:].diff().values) / pop, label=nation, bottom=dtp[ofs:].diff(), color='g')
                 plt.bar(dates[ofs:], data[ofs:].diff() / pop, label=nation, color='g' )
+                # plt.bar(dates[ofs:], dtp[ofs:].diff() / pop, label=nation, color='g', bottom=data[ofs:].diff() )
                 plt.plot(dates[ofs:], dtp[ofs:].diff() / pop, label=f"{nation}-death", color='r')
 
 
