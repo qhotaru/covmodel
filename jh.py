@@ -299,12 +299,17 @@ class realdata:
             positive.append(nn)
             datemark.append(md)
 
-        ofs = 50
+        ofs = 40
         df = pd.DataFrame(positive, columns=['positive'])
         df['date'] = datemark
         xx = np.linspace(0,len(data), len(data))
         # plt.bar(xx[ofs:], df['positive'][ofs:].rolling(7).mean(), label='positive')
-        plt.bar(datemark[ofs:], df['positive'][ofs:].rolling(7).mean(), label='positive')
+        y = df['positive'][ofs:].rolling(7).mean()
+        plt.bar(datemark[ofs:], y, label='positive')
+        print(y)
+        y2 = np.full( len(y), y.iat[-1] )
+        plt.plot(datemark[ofs:], y2, label='now', color='r')
+        
         # plt.bar(xx[ofs:], df['new'][ofs:].rolling(3).mean(), label='positive')
         title7 = 'Tokyo Newly confirmed rolling 7 days average'
         title3 = 'Tokyo Newly confirmed rolling 3 days average'
