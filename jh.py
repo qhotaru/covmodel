@@ -304,22 +304,40 @@ class realdata:
         df['date'] = datemark
         xx = np.linspace(0,len(data), len(data))
         # plt.bar(xx[ofs:], df['positive'][ofs:].rolling(7).mean(), label='positive')
-        y = df['positive'][ofs:].rolling(7).mean()
-        plt.bar(datemark[ofs:], y, label='positive')
-        print(y)
-        y2 = np.full( len(y), y.iat[-1] )
-        plt.plot(datemark[ofs:], y2, label='now', color='r')
+        report = df['positive'][ofs:].rolling(7).mean()
+
+        rep_delay = 7                         # onset to report delay
+        incube    = 5                         # incubation time
+        gt        = 4                         # Generation time
+        
+        onset    = report.shift(-rep_delay)   
+        infected = onset.shift(-incube)           
+        y = infected
+        y5 = y.shift(gt)
+
+        ax = plt.gca()
+        y2 = np.full( len(y), report.iat[-1] )
+        
+        ax.bar(datemark[ofs:], y, label='infected', color='y')
+        ax.plot(datemark[ofs:], y2, label='now', color='r')
+        bx = ax.twinx()
+        bx.plot(datemark[ofs:], y / y5, label='rough R', color='g')
+
+        print(report)
         
         # plt.bar(xx[ofs:], df['new'][ofs:].rolling(3).mean(), label='positive')
         title7 = 'Tokyo Newly confirmed rolling 7 days average'
         title3 = 'Tokyo Newly confirmed rolling 3 days average'
 
         xt = datemark[ofs::7]
-        plt.xticks(xt)
-        
+        ax.set_xticks(xt)
+
         plt.title(title7)
-        plt.ylabel('Person')
-        plt.xlabel('Days')
+        ax.set_ylabel('Person')
+        ax.set_xlabel('Days')
+        bx.set_ylabel('Roough R')
+        ax.legend()
+        bx.legend()
         plt.legend()
         plt.show()
         
