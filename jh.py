@@ -1,3 +1,5 @@
+#!/usr/bin/python
+#
 #-*- coding:utf-8 -*-
 
 from pykakasi import kakasi
@@ -83,6 +85,8 @@ class realdata:
     swsdomesticfile = '../2019-ncov-japan/50_Data/domesticDailyReport.csv'
     preffile        = '../2019-ncov-japan/50_Data/bydate.csv'
     jagfile         = 'data/COVID-19.csv'
+    jagfile_utf8    = 'jag-covid.csv'
+    jagfile_sjis    = 'jag-covid-sjis.csv'
     pop_dic         = { 'Japan' : 1.265 ,
                         'Korea, South' : 0.518,
                         'Vietnam' : 0.955,
@@ -100,15 +104,90 @@ class realdata:
         self.args = args
 
     def load_jag(self, args):
-        df1 = pd.read_csv(realdata.jagfile)
+        df1      = pd.read_csv(realdata.jagfile_utf8)
         colnames = df1.columns
-        # print( df )
+        # print( colnames )
+
+        istokyo = 0
+
+        df = df1
+        title = 'Japan'
+        interval = 14
+        if istokyo == 1:
+            interval = 7
+            title='Tokyo'
+            df = df1[df1['受診都道府県'] == '東京都']
+
+        kakutei   = df['確定日']
+        onsetname = '発症日'
+        onset     = df[onsetname]
+        pcrperson = df['PCR検査実施人数']
+
+        vc        = pcrperson.unique()
+        pcrperson = pcrperson.dropna()
+
+        iskakutei = 0
+
+        if iskakutei == 1:
+            title += ' reported date'
+            vc = kakutei.value_counts()
+        else:
+            title += ' Onset date'
+            vc = onset.value_counts()
+
+        vcdf = pd.DataFrame(vc)
+        vcdf['date'] = vcdf.index.map(
+            lambda d : datetime.datetime.strptime( d, '%m/%d/%Y')
+        )
+        vcdf = vcdf.sort_values('date')
+        vcdf['md'] = vcdf['date'].map(
+            lambda d : datetime.datetime.strftime( d, '%m/%d' )
+        )
+        print(vcdf)
+
+        ax = plt.subplot(211)
+
+        rol = vcdf[onsetname].rolling(7,center=True, min_periods=4).mean()
+        gt = 4
+        incube = 5
+        rol_infected = rol.shift(-incube)
+        rol_gt = rol.shift(-incube+gt)
+
+        ax.bar(vcdf.md, rol_infected, color='y', label='infected')
+        ax.plot(vcdf.md, rol, color='c', label='onset')
+        bx = plt.subplot(212)
+        bx.plot(vcdf.md, rol_infected / rol_gt)
+
+        ax.set_xlim( vcdf.iat[0,2], vcdf.iat[-1,2] )
+        bx.set_xlim( vcdf.iat[0,2], vcdf.iat[-1,2] )
+        
+        xticks = vcdf.md[::interval]
+        ax.set_xticks(xticks)
+        bx.set_xticks(xticks)
+        bx.set_ylim(0,)
+
+        # vline
+        preline = -10 - incube
+        mdloc = 2
+        ax.axvline(x=vcdf.iat[preline,mdloc],ymin=0, color='c')
+        bx.axvline(x=vcdf.iat[preline,mdloc],ymin=0, color='c')
+
+        # bx.set_title('Rough R')
+        ylabel = 'Number of confirmed'
+        ylabel2 = 'Rough R'
+        ax.set_title(title)
+        ax.set_ylabel(ylabel)
+        bx.set_ylabel(ylabel2)
+
+        ax.legend()
+        plt.show()
+    
+    def load_jag1(self, args):
+        df1 = pd.read_csv(realdata.jagfile_utf8)
+        colnames = df1.columns
         print( colnames )
-        # print( df1['受診都道府県'].value_counts() )
 
         df = df1[df1['受診都道府県'] == '東京都']
-        # print(df)
-        # return
     
         kakutei = df['確定日']
         onset = df['発症日']
@@ -119,13 +198,13 @@ class realdata:
         print(vc)
         pcrperson = pcrperson.dropna()
         print( pcrperson )
+
+        if False:
+            # plt.bar(kakutei, pcrperson, label='pcr')
+            plt.plot(kakutei, pcrperson, label='pcr')
+            plt.show()
+            return 
         
-        plt.bar(kakutei, pcrperson, label='pcr')
-        plt.show()
-        return 
-        
-        # print( kakutei.value_counts() )
-        # print( onset.value_counts() )
         vck = kakutei.value_counts()
         sk  = sorted( vck.keys() )
         dkl = []
@@ -134,8 +213,6 @@ class realdata:
             dkl.append(vck[dk])
 
         # plt.plot(sk, dkl, label='reported')
-
-        # print( onset.unique() )
         
         vc = onset.value_counts()
         od = []
@@ -161,7 +238,7 @@ class realdata:
         xl = len(ss)
         xx = np.linspace(0.0,xl-1, xl)
         # plt.bar(ss,dl,label='onset', color='g')
-        plt.bar(xx,dl,label='onset', color='g')
+        plt.bar(xx, dl, label='onset', color='g')
         plt.legend()
         plt.show()
     
