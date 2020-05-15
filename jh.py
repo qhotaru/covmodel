@@ -2,6 +2,7 @@
 #
 #-*- coding:utf-8 -*-
 
+import re
 from pykakasi import kakasi
 
 import numpy as np
@@ -104,24 +105,29 @@ class realdata:
         self.args = args
 
     def load_jag(self, args):
-        df1      = pd.read_csv(realdata.jagfile_utf8)
+        df1      = pd.read_csv(realdata.jagfile_utf8, low_memory=False)
+
         colnames = df1.columns
         # print( colnames )
 
-        istokyo = 0
+        istokyo = ( args.nation and args.nation[0] == 'tokyo') 
 
         df = df1
         title = 'Japan'
         interval = 14
+
         if istokyo == 1:
             interval = 7
             title='Tokyo'
             df = df1[df1['受診都道府県'] == '東京都']
 
-        kakutei   = df['確定日']
+        reportname = '確定日'
         onsetname = '発症日'
+        pcrname   = 'PCR検査実施人数'
+
+        kakutei   = df[reportname]
         onset     = df[onsetname]
-        pcrperson = df['PCR検査実施人数']
+        pcrperson = df[pcrname]
 
         vc        = pcrperson.unique()
         pcrperson = pcrperson.dropna()
@@ -136,14 +142,15 @@ class realdata:
             vc = onset.value_counts()
 
         vcdf = pd.DataFrame(vc)
+
         vcdf['date'] = vcdf.index.map(
             lambda d : datetime.datetime.strptime( d, '%m/%d/%Y')
         )
+
         vcdf = vcdf.sort_values('date')
         vcdf['md'] = vcdf['date'].map(
             lambda d : datetime.datetime.strftime( d, '%m/%d' )
         )
-        print(vcdf)
 
         ax = plt.subplot(211)
 
@@ -675,21 +682,42 @@ class realdata:
     
     def jhuplot(self, args):
         tp = self.load_data()
+        print(type(tp))
+        print(tp)
+
+        tp['date'] = tp.index.map(
+            lambda d : datetime.datetime.now() if re.match(r'[^0-9]', d) else datetime.datetime.strptime( d, '%m/%d/%y')
+        )
+        tp['date'] = tp['date'].map(
+            lambda d : datetime.datetime.strftime(d, '%m/%d')
+        )
+        tp['date'] = list(tp['date'])
+        
         nations = args.nation
         if nations == None or len(nations) <= 0:
             nations = ['Japan']
+
+        ofs = 28
+        a     = tp['date']
+        dates = a[realdata.header_colnum:]
+
         for nation in nations:
-            dataall = tp[nation]
-            data = dataall[realdata.header_colnum:]
-            ndata = len(data)
-            xx = np.linspace(0.0, ndata, ndata)
+            a     = tp[nation]
+            data  = a[realdata.header_colnum:]
             if args.plot == 'bar':
-                plt.bar(xx, data.diff(), label=nation)
+                # plt.bar(xx, data.diff(), label=nation)
+                plt.bar(dates[ofs:], data.diff()[ofs:], label=nation)
             else:
-                plt.plot(xx, data, label=nation)
+                plt.plot(dates[ofs:], data[ofs:], label=nation)
+
+        title = 'Confirmed cases {}'.format(nations)
+        ylabel = 'Number of Confirmed cases'
+        plt.ylabel( ylabel )
+        xticks = dates[ofs::14]
+        plt.xticks( xticks )
         plt.ylim(0,)
+        plt.title( title )
         plt.show()
-        pass
 
     def jhulastplot1(self, args):
 
