@@ -333,12 +333,14 @@ class realdata:
         ax.set_xticks(xt)
 
         plt.title(title7)
-        ax.set_ylabel('Person')
-        ax.set_xlabel('Days')
+        ax.set_ylabel('Number of positives')
+        ax.set_xlabel('Date')
         bx.set_ylabel('Roough R')
+
         ax.legend()
         bx.legend()
         plt.legend()
+
         plt.show()
         
     def tokyo_save(self, dic):
