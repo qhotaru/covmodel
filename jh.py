@@ -49,6 +49,7 @@ def doparse():
     parser.add_argument("--pop", action='store_true', help="option pop")
     parser.add_argument("--new", action='store_true', help="option new")
     parser.add_argument("--rolling", action='store_true', help="option rolling")
+    parser.add_argument("--offset", type=int, help="option offset")
 
     # SWS
     parser.add_argument("--sws", action='store_true', help="show sws bar")
@@ -192,7 +193,7 @@ class realdata:
     def load_jag1(self, args):
         df1 = pd.read_csv(realdata.jagfile_utf8)
         colnames = df1.columns
-        print( colnames )
+        # print( colnames )
 
         df = df1[df1['受診都道府県'] == '東京都']
     
@@ -202,7 +203,7 @@ class realdata:
         xx = np.linspace(0.0, len(pcrperson)-1, len(pcrperson))
         # vc = pcrperson.value_counts()
         vc = pcrperson.unique()
-        print(vc)
+        # print(vc)
         pcrperson = pcrperson.dropna()
         print( pcrperson )
 
@@ -341,6 +342,84 @@ class realdata:
                 poi.append(val)
             df2[m] = poi
 
+
+        df2['total'] = df2.loc[:,[1,2,3,4,5]].apply(sum, axis=1)
+        allage = df2['total'].sum()
+        df2['ratio'] = df2['total'].map( lambda x : 1.0 * x/allage )
+        df2['acc'] = df2['ratio'].cumsum()
+        print(df2)
+
+        ax = plt.subplot(111)
+        bx = ax.twinx()
+        bt = None
+        for m in mlist:
+            if type(bt) == type(None):
+                bt = df2[m] - df2[m].values
+                
+            # print(bt)
+            ax.bar(df2.index, df2[m], label=str(m), bottom=bt)
+            bt = bt + df2[m].values
+
+        pass
+        
+        bx.plot(df2.index, df2['acc'], label='cumsum', color='g')
+        
+        plt.title('Tokyo positives per age group')
+        plt.xlabel('Age Group')
+        ax.set_ylabel('Numer of positives')
+        bx.set_ylabel('Ratio')
+        plt.legend()
+        plt.show()
+
+        # plt.legend(["二乗値"], prop={"family":"MS Gothic"})
+
+        pass
+
+    def show_patients_stats1(self,dic):
+        patstatkey = 'patients'
+        pats = dic[patstatkey]
+        data = pats['data']
+        df = pd.DataFrame(data)
+
+        ds = []
+
+        # print(df['年代'])
+        for d in df['リリース日']:
+            dt = datetime.datetime.strptime(d, '%Y-%m-%dT%H:%M:%S.000Z')
+            month = dt.strftime( '%m' )
+            ds.append(int(month))
+
+        df['month'] = ds
+        mlist = sorted(df['month'].unique())
+
+        # print(df['month'])
+        v = df['年代']
+        self.kakasi_setup()
+        l = []
+        for x in v:
+            wamei = self.kakasi_doconv(x)
+            wamei2 = wamei.replace('dai','-')
+            wamei3 = wamei2.replace('10toshimiman','0-9')
+            wamei4 = wamei3.replace('100toshiijou','>100')
+            l.append( wamei4 )
+        df['age'] = l
+        alist =  sorted( df['age'].unique() )
+        # alist =  sorted( df['age'].unique(), key=int )
+
+        df2 = pd.DataFrame(alist,index=alist, columns=['age'])
+
+        for m in mlist:
+            poi = []
+            dk = df[df['month'] == m]
+            # print(dk)
+            vc = dk['age'].value_counts()
+            for ix in df2.index:
+                val = 0
+                if ix in vc:
+                    val = vc[ix]
+                poi.append(val)
+            df2[m] = poi
+
         print(df2)
 
         bt = None
@@ -383,7 +462,7 @@ class realdata:
             positive.append(nn)
             datemark.append(md)
 
-        ofs = 40
+        ofs = args.offset
         df = pd.DataFrame(positive, columns=['positive'])
         df['date'] = datemark
         xx = np.linspace(0,len(data), len(data))
@@ -448,7 +527,7 @@ class realdata:
             positive.append(nn)
             datemark.append(md)
 
-        ofs = 50
+        ofs = args.offset
         for ix in range(ofs, len(positive)):
             print( "\'{}\',{}".format(datemark[ix], positive[ix]))
 
@@ -558,7 +637,7 @@ class realdata:
 
         ax.xaxis.set_major_locator(DayLocator(bymonthday=None, interval=7, tz=None))
         ax.xaxis.set_major_formatter(DateFormatter("%m/%d"))
-        ofs = 30
+        ofs = args.offset
 
         if True:
             diff = df1['pcr'][ofs:].diff()
@@ -677,36 +756,36 @@ class realdata:
         # prov = tp.loc[:,'Provice/State',]
         # print( prov )
 
+        tp['date'] = tp.index.map(
+            lambda d : datetime.datetime.now() if re.match(r'[^0-9]', d) else datetime.datetime.strptime( d, '%m/%d/%y')
+        )
+        tp['md'] = tp['date'].map(
+            lambda d : datetime.datetime.strftime(d, '%m/%d')
+        )
+        tp = tp.iloc[realdata.header_colnum:]
         self.tp = tp
         return tp
     
     def jhuplot(self, args):
         tp = self.load_data()
-        print(type(tp))
-        print(tp)
 
-        tp['date'] = tp.index.map(
-            lambda d : datetime.datetime.now() if re.match(r'[^0-9]', d) else datetime.datetime.strptime( d, '%m/%d/%y')
-        )
-        tp['date'] = tp['date'].map(
-            lambda d : datetime.datetime.strftime(d, '%m/%d')
-        )
-        tp['date'] = list(tp['date'])
-        
         nations = args.nation
         if nations == None or len(nations) <= 0:
             nations = ['Japan']
 
-        ofs = 28
-        a     = tp['date']
-        dates = a[realdata.header_colnum:]
+        death = self.load_data( realdata.death_filename )
+
+        ofs = args.offset
+        dates      = tp['md']
 
         for nation in nations:
-            a     = tp[nation]
-            data  = a[realdata.header_colnum:]
+            data  = tp[nation]
+            ddata = death[nation]
+            
             if args.plot == 'bar':
                 # plt.bar(xx, data.diff(), label=nation)
                 plt.bar(dates[ofs:], data.diff()[ofs:], label=nation)
+                plt.plot(dates[ofs:], ddata.diff()[ofs:], label='death', color='r')
             else:
                 plt.plot(dates[ofs:], data[ofs:], label=nation)
 
@@ -715,65 +794,16 @@ class realdata:
         plt.ylabel( ylabel )
         xticks = dates[ofs::14]
         plt.xticks( xticks )
-        plt.ylim(0,)
+        if args.linear:
+            plt.ylim(0,)
+        else:
+            plt.yscale('log')
+        plt.legend()
         plt.title( title )
         plt.show()
 
-    def jhulastplot1(self, args):
-
-        pop = { 'Japan' : 1.3 ,
-                'Korea, South' : 0.6,
-                'Vietnam' : 0.9,
-                'Philippines' : 1,
-                # 'China' : 14,
-                'Malaysia' : 1,
-                'Singapore' : 0.1,
-                # 'New Zealand' : 0.1,
-                # 'Australia' : 0.2,
-                }
-        
-        tp = self.load_data( realdata.death_filename )
-        if args.datalist:
-            print( tp.columns )
-        
-        nations = args.nation
-        if nations == None or len(nations) <= 0:
-            # nations = ['Japan']
-            nations = pop.keys()
-        for nation in nations:
-            dataall = tp[nation]
-            dates = tp.index
-            dates = dates[4:]
-            # print( dates )
-
-            z = dataall.loc['Province/State',]
-            if False: # z != None and len(z)>1:
-                print(z)
-                v = dataall.sum()
-                print(v)
-
-            data = dataall[ realdata.header_colnum: ]
-            ndata = len(data)
-            xx = np.linspace(0.0, ndata, ndata)
-            ofs = 40
-            xticks = dates[ofs:][::14]
-            if args.plot == 'bar':
-                plt.bar(dates[ofs:], data[ofs:].diff(), label=nation)
-            else:
-                plt.plot(dates[ofs:], data[ofs:], label=nation)
-
-        plt.xticks(xticks)
-
-        if args.linear:
-            plt.ylim(0,)
-        title = 'Confirmed death by JHU, Asian Nations'
-        plt.title(title)
-
-        plt.legend()
-        plt.show()
-    
     def jhulastplot(self, args):
-        ofs = 40
+        ofs = args.offset
 
         if args.death:
             fname = realdata.death_filename
@@ -782,6 +812,7 @@ class realdata:
             fname = realdata.filename
             dname = realdata.death_filename
         tp = self.load_data( fname )
+        dates = tp['md']
         if args.datalist:
             print( tp.columns )
         
@@ -790,38 +821,23 @@ class realdata:
             # nations = ['Japan']
             nations = realdata.pop_dic.keys()
         for nation in nations:
-            dataall = tp[nation]
-            dates = tp.index
-            # dates = dates[realdata.header_colnum:]
-            dates = dates[realdata.header_colnum:].map(
-                lambda d: datetime.datetime.strptime(d,'%m/%d/%y').strftime('%m/%d')
-            )
-            # print( dates )
-
+            data   = tp[nation]
             pop = 1
             if args.pop and nation in realdata.pop_dic:
                 pop = realdata.pop_dic[nation] * 100 # to per million
 
-            data   = dataall[ realdata.header_colnum: ]
-            ndata  = len(data)
-            xx     = np.linspace(0.0, ndata, ndata)
-            xticks = dates[ofs:][::7]
             if not args.new:
                 plt.plot(dates[ofs:], data[ofs:] / pop, label=nation)
             elif args.rolling:
                 plt.bar(dates[ofs:], data[ofs:].diff().rolling(7).mean() / pop, label=nation)
             else:
-                dh = self.load_data( dname )
-                indexname     = 'Country/Region'
-                death       = dh[realdata.header_colnum:]
+                death = self.load_data( dname )
                 dtp         = death[nation]
                 # plt.bar(dates[ofs:], (data[ofs:].diff() - dtp[ofs:].diff().values) / pop, label=nation, bottom=dtp[ofs:].diff()*10, color='g')
                 # plt.bar(dates[ofs:], (data[ofs:].diff() - dtp[ofs:].diff().values) / pop, label=nation, bottom=dtp[ofs:].diff(), color='g')
                 plt.bar(dates[ofs:], data[ofs:].diff() / pop, label=nation, color='g' )
                 # plt.bar(dates[ofs:], dtp[ofs:].diff() / pop, label=nation, color='g', bottom=data[ofs:].diff() )
                 plt.plot(dates[ofs:], dtp[ofs:].diff() / pop, label=f"{nation}-death", color='r')
-
-
         obj = 'Death' if args.death else 'Cases'
         note = ' per million' if args.pop else ''
         title = 'Confirmed ' + obj + note + ' by JHU, Asian Nations'
@@ -830,6 +846,7 @@ class realdata:
         if not args.linear:
             plt.yscale('log')
         
+        xticks = dates[ofs:][::7]
         plt.xticks(xticks)
         if args.linear:
             plt.ylim(0,)
