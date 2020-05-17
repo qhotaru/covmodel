@@ -19,6 +19,6 @@ done
 
 # curl -O https://dl.dropboxusercontent.com/s/6mztoeb6xf78g5w/COVID-19.csv
 file=jag-covid.csv
-copy ${file}.bak ${file}.bak2
-copy $file ${file}.bak
+cp ${file}.bak ${file}.bak2
+cp $file ${file}.bak
 curl.exe -o $file  https://dl.dropboxusercontent.com/s/6mztoeb6xf78g5w/COVID-19.csv

@@ -74,8 +74,71 @@ def doparse():
     parser.add_argument("--q", action='store_true', help="show Q")
     parser.add_argument("--n", action='store_true', help="show N")
 
+    parser.add_argument("--kcdcage", action='store_true', help="show korea age")
+
     args = parser.parse_args()
     return args
+
+
+class kcdcage:
+    filename = '2020-05-17-korea-age-01.txt'
+    def __init__(self):
+        pass
+    def show_age(self):
+        agedic  = self.load_text()
+        names   = list(agedic.keys())
+        count   = list(agedic.values())
+        names.reverse()
+        count.reverse()
+        df = pd.DataFrame(count, index=names, columns=['group'])
+        total = df['group'].sum()
+        df['ratio'] = df['group'].map(
+            lambda x : 1.0 * x / total
+            )
+        df['acc'] = df['ratio'].cumsum()
+        print(df)
+
+        ax = plt.subplot(111)
+        ax.bar(names, count, label='KoreaAges')
+        ax.set_ylabel('Number of cases')
+        bx = ax.twinx()
+        bx.plot(names,df['acc'], label='ratio', color='g')
+        bx.set_ylabel('Accumrated Ratio')
+
+        fontsize = 12
+        for p in ax.patches:
+            x = p.get_x()
+            w = p.get_width()
+            h = p.get_height()
+            ax.text(x+w/2, h, '{:d}'.format(h), color='black', fontsize=fontsize, ha='center', va='bottom')
+        
+        plt.show()
+        
+    def load_text(self):
+        with open(kcdcage.filename,'r') as f:
+            state = 0
+            ages = {}
+            group = ""
+            for line in f:
+                line = line.strip()
+                if state == 0 and re.match(r'^Age',line):
+                    state = 1
+                elif state == 1 and len(line)>0:
+                    group = line.replace(' and above', '-')
+                    state = 2
+                elif state == 2 and len(line)>0:
+                    ages[group] = int(line.replace(',',''))
+                    state = 3
+                elif state == 3 and re.match(r'^[0-9]+-[0-9]+',line):
+                    group = line
+                    state = 2
+                # elif state == 3 and re.match(r'^-', line):
+                  #   break
+            pass
+            print( ages )
+            return ages
+        pass
+    pass
 
 
 class realdata:
@@ -1369,6 +1432,10 @@ if __name__ == '__main__':
     elif args.domestic:
         rd = realdata(args)
         rd.load_domestic(args)
+    elif args.kcdcage:
+        kcdc = kcdcage()
+        # kcdc.load_text()
+        kcdc.show_age()
     else:
         main(args)
 
