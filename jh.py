@@ -41,6 +41,7 @@ def doparse():
     parser.add_argument("-j", "--jhu", action='store_true', help="show jhu")
     parser.add_argument("--datalist", action='store_true', help="show data list")
     parser.add_argument("--jhulast", action='store_true', help="show jhu last")
+    parser.add_argument("--jhulast2", action='store_true', help="show jhu last 2")
     parser.add_argument("--korea", action='store_true', help="show korea")
     parser.add_argument("--plot", help="plot type, line, bar")
 
@@ -80,11 +81,55 @@ def doparse():
     return args
 
 
+class PlotGrid:
+    def __init__(self):
+        pass
+    pass
+
+    def prepare(self, array):
+        self.px = plt.subplot( array )
+        return self.px
+
+
+    def test(self):
+        pass
+
 class kcdcage:
     filename = '2020-05-17-korea-age-01.txt'
     def __init__(self):
+        self.df = None
         pass
-    def show_age(self):
+
+    def show_subplot(self, ax, df = None):
+        if type(df) != pd.DataFrame:
+            df = self.df
+        if type(df) != pd.DataFrame:
+            print("kcdcage.show_subplot: no data frame provided.")
+            return
+        ax.bar(df.index, df['group'], label='KoreaAges')
+        ax.set_ylabel('Number of cases')
+        bx = ax.twinx()
+        bx.plot(df.index,df['acc'], label='ratio', color='g')
+        bx.set_ylabel('Accumrated Ratio')
+
+        fontsize = 12
+        for p in ax.patches:
+            x = p.get_x()
+            w = p.get_width()
+            h = p.get_height()
+            ax.text(x+w/2, h, '{:d}'.format(h), color='black', fontsize=fontsize, ha='center', va='bottom')
+
+        for tx, ty in zip(df.index, df['acc']):
+            label = "{:.2f}".format(ty)
+            plt.annotate(label,
+                         (tx,ty),
+                         textcoords='offset points',
+                         xytext=(0,10),
+                         color='g',
+                         ha='center'
+            )
+        
+    def load_data(self):
         agedic  = self.load_text()
         names   = list(agedic.keys())
         count   = list(agedic.values())
@@ -96,22 +141,14 @@ class kcdcage:
             lambda x : 1.0 * x / total
             )
         df['acc'] = df['ratio'].cumsum()
-        print(df)
-
-        ax = plt.subplot(111)
-        ax.bar(names, count, label='KoreaAges')
-        ax.set_ylabel('Number of cases')
-        bx = ax.twinx()
-        bx.plot(names,df['acc'], label='ratio', color='g')
-        bx.set_ylabel('Accumrated Ratio')
-
-        fontsize = 12
-        for p in ax.patches:
-            x = p.get_x()
-            w = p.get_width()
-            h = p.get_height()
-            ax.text(x+w/2, h, '{:d}'.format(h), color='black', fontsize=fontsize, ha='center', va='bottom')
+        self.df = df
+        return df
+        # print(df)
         
+    def show_age(self):
+        df = self.load_data()
+        ax = plt.subplot(111)
+        self.show_subplot(ax, df)
         plt.show()
         
     def load_text(self):
@@ -152,6 +189,7 @@ class realdata:
     jagfile         = 'data/COVID-19.csv'
     jagfile_utf8    = 'jag-covid.csv'
     jagfile_sjis    = 'jag-covid-sjis.csv'
+
     pop_dic         = { 'Japan' : 1.265 ,
                         'Korea, South' : 0.518,
                         'Vietnam' : 0.955,
@@ -162,6 +200,7 @@ class realdata:
                         'Indonesia' : 2.678,
                         # 'New Zealand' : 0.0488,
                         # 'Australia' : 0.2499,
+                        'Thailand'    : 0.5,
     }
 
     def __init__(self, args):
@@ -918,6 +957,74 @@ class realdata:
         plt.title(title)
         plt.show()
     
+    def jhulastplot2(self, args):
+        ofs = args.offset
+
+        if args.death:
+            fname = realdata.death_filename
+            dname = realdata.death_filename
+        else:
+            fname = realdata.filename
+            dname = realdata.death_filename
+        tp = self.load_data( fname )
+        dates = tp['md']
+        if args.datalist:
+            print( tp.columns )
+        
+        nations = args.nation
+        if nations == None or len(nations) <= 0:
+            # nations = ['Japan']
+            nations = realdata.pop_dic.keys()
+
+        maxnw = 4
+        nw = (len(nations)-1) % maxnw + 1
+        nh = int( (len(nations)-1) / maxnw ) + 1 
+        np = nh * 100 + nw * 10
+        xticks = dates[ofs:][::28]
+
+        nix = 0
+        for nation in nations:
+            nix += 1
+            # print("DEBUG {} {}".format(np, nix))
+            px = plt.subplot( np + nix )
+
+            data   = tp[nation]
+            pop = 1
+            if args.pop and nation in realdata.pop_dic:
+                pop = realdata.pop_dic[nation] * 100 # to per million
+
+            if not args.new:
+                px.plot(dates[ofs:], data[ofs:] / pop, label=nation)
+            elif args.rolling:
+                px.bar(dates[ofs:], data[ofs:].diff().rolling(7).mean() / pop, label=nation)
+            else:
+                death = self.load_data( dname )
+                dtp   = death[nation]
+                # plt.bar(dates[ofs:], (data[ofs:].diff() - dtp[ofs:].diff().values) / pop, label=nation, bottom=dtp[ofs:].diff()*10, color='g')
+                # plt.bar(dates[ofs:], (data[ofs:].diff() - dtp[ofs:].diff().values) / pop, label=nation, bottom=dtp[ofs:].diff(), color='g')
+                px.bar(dates[ofs:], data[ofs:].diff() / pop, label=nation, color='y' )
+                # plt.bar(dates[ofs:], dtp[ofs:].diff() / pop, label=nation, color='g', bottom=data[ofs:].diff() )
+                px.plot(dates[ofs:], dtp[ofs:].diff() / pop, label=f"{nation}-death", color='r')
+            px.set_title(nation)
+            if args.linear:
+                px.set_ylim(0,)
+
+            if not args.linear:
+                px.set_yscale('log')
+
+            px.set_xticks(xticks)
+
+        obj    = 'Death' if args.death else 'Cases'
+        note   = ' per million' if args.pop else ''
+        title  = 'Confirmed ' + obj + note + ' by JHU, Asian Nations'
+        ylabel = 'Number of Confirmed ' + obj + note
+
+        
+        # plt.ylabel(ylabel)
+        # plt.legend()
+        # plt.title(title)
+        plt.show()
+    
     def readit(self, filename):
         with open(realdata.filename, encoding='utf-8') as f:
             line = f.readline()
@@ -1420,6 +1527,9 @@ if __name__ == '__main__':
     elif args.jhulast:
         rd = realdata(args)
         rd.jhulastplot(args)
+    elif args.jhulast2:
+        rd = realdata(args)
+        rd.jhulastplot2(args)
     elif args.sws:
         rd = realdata(args)
         rd.swsplot(args)
