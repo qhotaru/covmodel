@@ -189,6 +189,8 @@ class realdata:
     jagfile         = 'data/COVID-19.csv'
     jagfile_utf8    = 'jag-covid.csv'
     jagfile_sjis    = 'jag-covid-sjis.csv'
+    pname           = 'Province/State'
+
 
     pop_dic         = { 'Japan' : 1.265 ,
                         'Korea, South' : 0.518,
@@ -851,9 +853,12 @@ class realdata:
         # print( ocols )
         tp = df.transpose()
         indexname = 'Country/Region'
+        prov = tp.loc[realdata.pname,]
+        prov[prov.isnull()] = ''
         cols = tp.loc[indexname,]
-        tp.columns = cols
+        tp.columns = cols + prov
         tp.index = ocols
+        tp[realdata.pname] = prov
 
         # prov = tp.loc[:,'Provice/State',]
         # print( prov )
@@ -989,6 +994,7 @@ class realdata:
             px = plt.subplot( np + nix )
 
             data   = tp[nation]
+
             pop = 1
             if args.pop and nation in realdata.pop_dic:
                 pop = realdata.pop_dic[nation] * 100 # to per million
