@@ -51,6 +51,7 @@ def doparse():
     parser.add_argument("--new", action='store_true', help="option new")
     parser.add_argument("--rolling", action='store_true', help="option rolling")
     parser.add_argument("--offset", type=int, help="option offset")
+    parser.add_argument("--reff", action='store_true', help="option Reff")
 
     # SWS
     parser.add_argument("--sws", action='store_true', help="show sws bar")
@@ -191,6 +192,10 @@ class realdata:
     jagfile_sjis    = 'jag-covid-sjis.csv'
     pname           = 'Province/State'
 
+    rep_dealy       = 7
+    incube          = 5
+    generation_time = 4
+
 
     pop_dic         = { 'Japan' : 1.265 ,
                         'Korea, South' : 0.518,
@@ -202,6 +207,7 @@ class realdata:
                         'Indonesia' : 2.678,
                         # 'New Zealand' : 0.0488,
                         # 'Australia' : 0.2499,
+                        'Pakistan' : 2.122, 
                         'Thailand'    : 0.5,
     }
 
@@ -573,11 +579,11 @@ class realdata:
         # plt.bar(xx[ofs:], df['positive'][ofs:].rolling(7).mean(), label='positive')
         report = df['positive'][ofs:].rolling(7).mean()
 
-        rep_delay = 7                         # onset to report delay
-        incube    = 5                         # incubation time
-        gt        = 4                         # Generation time
+        rep_delay = realdata.rep_delay        # onset to report delay
+        incube    = realdata.incube           # incubation time
+        gt        = realdata.generation_time  # Generation time
         
-        onset    = report.shift(-rep_delay)   
+        onset    = report.shift(-rep_delay)
         infected = onset.shift(-incube)           
         y = infected
         y5 = y.shift(gt)
@@ -595,11 +601,12 @@ class realdata:
         # plt.bar(xx[ofs:], df['new'][ofs:].rolling(3).mean(), label='positive')
         title7 = 'Tokyo Newly confirmed rolling 7 days average'
         title3 = 'Tokyo Newly confirmed rolling 3 days average'
+        title7a = 'Tokyo Newly confirmed rolling 7 days, report_delay=' + str(rep_delay) + 'days, incubation='+ str(incube) +'days'
 
         xt = datemark[ofs::7]
         ax.set_xticks(xt)
 
-        plt.title(title7)
+        plt.title(title7a)
         ax.set_ylabel('Number of positives')
         ax.set_xlabel('Date')
         bx.set_ylabel('Roough R')
@@ -964,6 +971,8 @@ class realdata:
     
     def jhulastplot2(self, args):
         ofs = args.offset
+        if ofs == None:
+            ofs = 0
 
         if args.death:
             fname = realdata.death_filename
@@ -985,7 +994,11 @@ class realdata:
         nw = (len(nations)-1) % maxnw + 1
         nh = int( (len(nations)-1) / maxnw ) + 1 
         np = nh * 100 + nw * 10
-        xticks = dates[ofs:][::28]
+
+        skip = int((len(dates) - ofs) / 8 / 7 ) * 7
+        print('skip = {}'.format(skip))
+        xticks = dates[ofs:][::skip]
+        plt.subplots_adjust(wspace=0.4, hspace=0.6)
 
         nix = 0
         for nation in nations:
@@ -1002,7 +1015,15 @@ class realdata:
             if not args.new:
                 px.plot(dates[ofs:], data[ofs:] / pop, label=nation)
             elif args.rolling:
-                px.bar(dates[ofs:], data[ofs:].diff().rolling(7).mean() / pop, label=nation)
+                y = data.diff().rolling(7, center=True, min_periods=4).mean()
+                px.bar(dates[ofs:], y[ofs:] / pop, label=nation, color='y')
+                msg = 'death' if args.death else 'cases'
+                px.set_ylabel( 'Number of Newly confirmed ' + msg )
+                if args.reff:
+                    bx = px.twinx()
+                    reff = y / y.shift(realdata.generation_time)
+                    bx.plot( dates[ofs:], reff[ofs:], label='reff', color='g')
+                    bx.set_ylabel('Rough R')
             else:
                 death = self.load_data( dname )
                 dtp   = death[nation]
@@ -1011,7 +1032,7 @@ class realdata:
                 px.bar(dates[ofs:], data[ofs:].diff() / pop, label=nation, color='y' )
                 # plt.bar(dates[ofs:], dtp[ofs:].diff() / pop, label=nation, color='g', bottom=data[ofs:].diff() )
                 px.plot(dates[ofs:], dtp[ofs:].diff() / pop, label=f"{nation}-death", color='r')
-            px.set_title(nation)
+            px.set_title( nation )
             if args.linear:
                 px.set_ylim(0,)
 

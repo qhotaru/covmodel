@@ -37,6 +37,9 @@ def domain(args):
     n = 60 # 60回の試行
     p = 0.5 # 表が出る確率(帰無仮説)
 
+    n = 250
+    p = 0.1
+
     # 「反復試行の確率」の定理
     xx = pd.Series([comb(float(n), x)*p**x*(1-p)**(float(n)-x) for x in range(0, n+1)])
 
@@ -65,8 +68,9 @@ def domain(args):
     plt.plot(xx.index, border_h)
     plt.plot(xx.index, border_l)
 
-    for omote in range(36,39):
-        pomote = stats.binom_test(omote, n, p, alternative='greater')
+    for omote in range(0,int(n*p)):
+        # pomote = stats.binom_test(omote, n, p, alternative='greater')
+        pomote = stats.binom_test(omote, n, p, alternative='less')
         print('表が{}回回出たときのp値: {:.3f}'.format(omote, pomote))
 
     plt.show()
@@ -115,14 +119,18 @@ def domain2():
 
 def docom(args):
     n   = args.n
-    v = args.v
+    v   = args.v
     p   = args.p
     
-    ap = stats.binom_test( v, n, p, alternative='greater' )
+    # ap = stats.binom_test( v, n, p, alternative='greater' )
+    ap = stats.binom_test( v, n, p, alternative='less' )
     print("ap={} n = {} v = {} p={}".format(ap, n, v, p))
 
     bot, up = stats.binom.interval(alpha=p, n=n, p= v/n,loc=0)
     print("(bot,up)=({},{}) = ({:.2f},{:.2f})".format(bot,up,bot/n,up/n))
+
+    bot, up = stats.binom.interval(alpha=v/n, n=n, p= p,loc=0)
+    print("add(bot,up)=({},{}) = ({:.2f},{:.2f})".format(bot,up,bot/n,up/n))
 
 
 def docom2():
