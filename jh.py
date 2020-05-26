@@ -1024,6 +1024,7 @@ class realdata:
                     reff = y / y.shift(realdata.generation_time)
                     bx.plot( dates[ofs:], reff[ofs:], label='reff', color='g')
                     bx.set_ylabel('Rough R')
+                    bx.set_ylim(0,5)
             else:
                 death = self.load_data( dname )
                 dtp   = death[nation]
