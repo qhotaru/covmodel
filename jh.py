@@ -883,6 +883,10 @@ class realdata:
     def jhuplot(self, args):
         tp = self.load_data()
 
+        if args.datalist:
+            for x in tp.columns:
+                print( x )
+            
         nations = args.nation
         if nations == None or len(nations) <= 0:
             nations = ['Japan']
