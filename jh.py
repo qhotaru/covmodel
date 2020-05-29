@@ -192,7 +192,7 @@ class realdata:
     jagfile_sjis    = 'jag-covid-sjis.csv'
     pname           = 'Province/State'
 
-    rep_dealy       = 7
+    rep_delay       = 7
     incube          = 5
     generation_time = 4
 
@@ -603,13 +603,14 @@ class realdata:
         title3 = 'Tokyo Newly confirmed rolling 3 days average'
         title7a = 'Tokyo Newly confirmed rolling 7 days, report_delay=' + str(rep_delay) + 'days, incubation='+ str(incube) +'days'
 
-        xt = datemark[ofs::7]
+        xt = datemark[ofs::14]
         ax.set_xticks(xt)
 
         plt.title(title7a)
         ax.set_ylabel('Number of positives')
         ax.set_xlabel('Date')
         bx.set_ylabel('Roough R')
+        bx.set_ylim(0,6)
 
         ax.legend()
         bx.legend()
