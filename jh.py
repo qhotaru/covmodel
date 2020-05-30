@@ -197,18 +197,19 @@ class realdata:
     generation_time = 4
 
 
-    pop_dic         = { 'Japan' : 1.265 ,
-                        'Korea, South' : 0.518,
-                        'Vietnam' : 0.955,
+    pop_dic         = { 
                         'Philippines' : 1.06,
+                        'Japan' : 1.265 ,
+                        'Pakistan' : 2.122, 
+                        'Indonesia' : 2.678,        
+                        'Korea, South' : 0.518,
                         # 'China' : 14,
-                        'Malaysia' : 0.315,
                         'Singapore' : 0.0563,
-                        'Indonesia' : 2.678,
+                        'Malaysia' : 0.315,
+                        'Thailand'    : 0.5,
+                        'Vietnam' : 0.955,
                         # 'New Zealand' : 0.0488,
                         # 'Australia' : 0.2499,
-                        'Pakistan' : 2.122, 
-                        'Thailand'    : 0.5,
     }
 
     def __init__(self, args):
@@ -891,6 +892,8 @@ class realdata:
         nations = args.nation
         if nations == None or len(nations) <= 0:
             nations = ['Japan']
+        if nations[0] == 'all':
+            nations = tp.columns
 
         death = self.load_data( realdata.death_filename )
 
@@ -898,13 +901,19 @@ class realdata:
         dates      = tp['md']
 
         for nation in nations:
+            if nation == 'md' or nation == 'Province/State' or nation == 'date':
+                continue
             data  = tp[nation]
             ddata = death[nation]
             
             if args.plot == 'bar':
                 # plt.bar(xx, data.diff(), label=nation)
-                plt.bar(dates[ofs:], data.diff()[ofs:], label=nation)
-                plt.plot(dates[ofs:], ddata.diff()[ofs:], label='death', color='r')
+                if args.rolling:
+                    plt.bar(dates[ofs:], data.diff()[ofs:].rolling(7).mean(), label=nation)
+                    plt.plot(dates[ofs:], ddata.diff()[ofs:].rolling(7).mean(), label='death', color='r')
+                else:
+                    plt.bar(dates[ofs:], data.diff()[ofs:], label=nation)
+                    plt.plot(dates[ofs:], ddata.diff()[ofs:], label='death', color='r')
             else:
                 plt.plot(dates[ofs:], data[ofs:], label=nation)
 
@@ -997,18 +1006,19 @@ class realdata:
 
         maxnw = 4
         nw = (len(nations)-1) % maxnw + 1
-        nh = int( (len(nations)-1) / maxnw ) + 1 
+        nw = maxnw if len(nations) >= 4 else len(nations)
+        nh = int( (len(nations) + maxnw) / maxnw )
         np = nh * 100 + nw * 10
 
         skip = int((len(dates) - ofs) / 8 / 7 ) * 7
-        print('skip = {}'.format(skip))
+        # print('skip = {}'.format(skip))
         xticks = dates[ofs:][::skip]
         plt.subplots_adjust(wspace=0.4, hspace=0.6)
 
         nix = 0
         for nation in nations:
             nix += 1
-            # print("DEBUG {} {}".format(np, nix))
+            print("DEBUG len={} np {} nix {}".format(len(nations), np, nix))
             px = plt.subplot( np + nix )
 
             data   = tp[nation]
