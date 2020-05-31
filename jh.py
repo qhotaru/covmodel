@@ -42,6 +42,7 @@ def doparse():
     parser.add_argument("--datalist", action='store_true', help="show data list")
     parser.add_argument("--jhulast", action='store_true', help="show jhu last")
     parser.add_argument("--jhulast2", action='store_true', help="show jhu last 2")
+    parser.add_argument("--jhulast3", action='store_true', help="show jhu last 3")
     parser.add_argument("--korea", action='store_true', help="show korea")
     parser.add_argument("--plot", help="plot type, line, bar")
 
@@ -865,7 +866,7 @@ class realdata:
         prov = tp.loc[realdata.pname,]
         prov[prov.isnull()] = ''
         cols = tp.loc[indexname,]
-        tp.columns = cols + prov
+        tp.columns = cols + '-' + prov
         tp.index = ocols
         tp[realdata.pname] = prov
 
@@ -901,7 +902,7 @@ class realdata:
         dates      = tp['md']
 
         for nation in nations:
-            if nation == 'md' or nation == 'Province/State' or nation == 'date':
+            if nation == 'md' or nation == realdata.pname or nation == 'date':
                 continue
             data  = tp[nation]
             ddata = death[nation]
@@ -1003,6 +1004,94 @@ class realdata:
         if nations == None or len(nations) <= 0:
             # nations = ['Japan']
             nations = realdata.pop_dic.keys()
+
+        maxnw = 4
+        nw = (len(nations)-1) % maxnw + 1
+        nw = maxnw if len(nations) >= 4 else len(nations)
+        nh = int( (len(nations) + maxnw) / maxnw )
+        np = nh * 100 + nw * 10
+
+        skip = int((len(dates) - ofs) / 8 / 7 ) * 7
+        # print('skip = {}'.format(skip))
+        xticks = dates[ofs:][::skip]
+        plt.subplots_adjust(wspace=0.4, hspace=0.6)
+
+        nix = 0
+        for nation in nations:
+            nix += 1
+            print("DEBUG len={} np {} nix {}".format(len(nations), np, nix))
+            px = plt.subplot( np + nix )
+
+            data   = tp[nation]
+
+            pop = 1
+            if args.pop and nation in realdata.pop_dic:
+                pop = realdata.pop_dic[nation] * 100 # to per million
+
+            if not args.new:
+                px.plot(dates[ofs:], data[ofs:] / pop, label=nation)
+            elif args.rolling:
+                y = data.diff().rolling(7, center=True, min_periods=4).mean()
+                px.bar(dates[ofs:], y[ofs:] / pop, label=nation, color='y')
+                msg = 'death' if args.death else 'cases'
+                px.set_ylabel( 'Number of Newly confirmed ' + msg )
+                if args.reff:
+                    bx = px.twinx()
+                    reff = y / y.shift(realdata.generation_time)
+                    bx.plot( dates[ofs:], reff[ofs:], label='reff', color='g')
+                    bx.set_ylabel('Rough R')
+                    bx.set_ylim(0,5)
+            else:
+                death = self.load_data( dname )
+                dtp   = death[nation]
+                # plt.bar(dates[ofs:], (data[ofs:].diff() - dtp[ofs:].diff().values) / pop, label=nation, bottom=dtp[ofs:].diff()*10, color='g')
+                # plt.bar(dates[ofs:], (data[ofs:].diff() - dtp[ofs:].diff().values) / pop, label=nation, bottom=dtp[ofs:].diff(), color='g')
+                px.bar(dates[ofs:], data[ofs:].diff() / pop, label=nation, color='y' )
+                # plt.bar(dates[ofs:], dtp[ofs:].diff() / pop, label=nation, color='g', bottom=data[ofs:].diff() )
+                px.plot(dates[ofs:], dtp[ofs:].diff() / pop, label=f"{nation}-death", color='r')
+            px.set_title( nation )
+            if args.linear:
+                px.set_ylim(0,)
+
+            if not args.linear:
+                px.set_yscale('log')
+
+            px.set_xticks(xticks)
+
+        obj    = 'Death' if args.death else 'Cases'
+        note   = ' per million' if args.pop else ''
+        title  = 'Confirmed ' + obj + note + ' by JHU, Asian Nations'
+        ylabel = 'Number of Confirmed ' + obj + note
+
+        
+        # plt.ylabel(ylabel)
+        # plt.legend()
+        # plt.title(title)
+        plt.show()
+    
+    def jhulastplot3(self, args):
+        ofs = args.offset
+        if ofs == None:
+            ofs = 0
+
+        if args.death:
+            fname = realdata.death_filename
+            dname = realdata.death_filename
+        else:
+            fname = realdata.filename
+            dname = realdata.death_filename
+        tp = self.load_data( fname )
+        dates = tp['md']
+        if args.datalist:
+            print( tp.columns )
+        
+        nations = args.nation
+        if nations == None or len(nations) <= 0:
+            # nations = ['Japan']
+            nations = realdata.pop_dic.keys()
+        elif nations[0] == 'all':
+            nations = tp.columns
+            nations.drop(['md','date',realdata.pname])
 
         maxnw = 4
         nw = (len(nations)-1) % maxnw + 1
@@ -1573,6 +1662,9 @@ if __name__ == '__main__':
     elif args.jhulast2:
         rd = realdata(args)
         rd.jhulastplot2(args)
+    elif args.jhulast3:
+        rd = realdata(args)
+        rd.jhulastplot3(args)
     elif args.sws:
         rd = realdata(args)
         rd.swsplot(args)
