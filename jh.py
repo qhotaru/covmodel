@@ -866,7 +866,7 @@ class realdata:
         prov = tp.loc[realdata.pname,]
         prov[prov.isnull()] = ''
         cols = tp.loc[indexname,]
-        tp.columns = cols + '-' + prov
+        tp.columns = cols + prov
         tp.index = ocols
         tp[realdata.pname] = prov
 
