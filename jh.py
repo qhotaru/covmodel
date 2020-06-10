@@ -11,7 +11,9 @@ import matplotlib.pyplot as plt
 import argparse
 import pandas as pd
 
+from datetime import datetime
 import datetime
+
 from matplotlib.dates import drange
 from matplotlib.dates import DateFormatter
 from matplotlib.dates import DayLocator
@@ -257,12 +259,12 @@ class realdata:
         vcdf = pd.DataFrame(vc)
 
         vcdf['date'] = vcdf.index.map(
-            lambda d : datetime.datetime.strptime( d, '%m/%d/%Y')
+            lambda d : datetime.strptime( d, '%m/%d/%Y')
         )
 
         vcdf = vcdf.sort_values('date')
         vcdf['md'] = vcdf['date'].map(
-            lambda d : datetime.datetime.strftime( d, '%m/%d' )
+            lambda d : datetime.strftime( d, '%m/%d' )
         )
 
         ax = plt.subplot(211)
@@ -339,7 +341,7 @@ class realdata:
         odic = {}
         osum = 0
         for o in vc.keys():
-            dt = datetime.datetime.strptime(o, '%m/%d/%Y')
+            dt = datetime.strptime(o, '%m/%d/%Y')
             od.append( dt )
             odic[dt] = o
 
@@ -419,7 +421,7 @@ class realdata:
 
         # print(df['年代'])
         for d in df['リリース日']:
-            dt = datetime.datetime.strptime(d, '%Y-%m-%dT%H:%M:%S.000Z')
+            dt = datetime.strptime(d, '%Y-%m-%dT%H:%M:%S.000Z')
             month = dt.strftime( '%m' )
             ds.append(int(month))
 
@@ -497,7 +499,7 @@ class realdata:
 
         # print(df['年代'])
         for d in df['リリース日']:
-            dt = datetime.datetime.strptime(d, '%Y-%m-%dT%H:%M:%S.000Z')
+            dt = datetime.strptime(d, '%Y-%m-%dT%H:%M:%S.000Z')
             month = dt.strftime( '%m' )
             ds.append(int(month))
 
@@ -566,7 +568,7 @@ class realdata:
                 print("")
             ix += 1
             dd = elm['日付']
-            dt = datetime.datetime.strptime(dd, '%Y-%m-%dT%H:%M:%S.000Z')
+            dt = datetime.strptime(dd, '%Y-%m-%dT%H:%M:%S.000Z')
             md = dt.strftime( '%m/%d' )
 
             nn = elm['小計']
@@ -633,7 +635,7 @@ class realdata:
                 print("")
             ix += 1
             dd = elm['日付']
-            dt = datetime.datetime.strptime(dd, '%Y-%m-%dT%H:%M:%S.000Z')
+            dt = datetime.strptime(dd, '%Y-%m-%dT%H:%M:%S.000Z')
             md = dt.strftime( '%m/%d' )
 
             nn = elm['小計']
