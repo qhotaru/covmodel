@@ -1,0 +1,7 @@
+#!/usr/bin/python
+#
+# mpl.py
+#
+import matplotlib
+# matplotlib.use('GTK3Agg')
+
